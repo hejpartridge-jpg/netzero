@@ -10,6 +10,7 @@ class ProfileStore extends ChangeNotifier {
   double annualGasKwh = 0;
   String fuelType = 'natural_gas';
   double annualElectricityKwh = 0;
+  String tariff = 'PPA';
   double annualWaterM3 = 0;
 
   // ── Transport ──────────────────────────────────────────

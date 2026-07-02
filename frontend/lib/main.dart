@@ -280,6 +280,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
   final _electricityController = TextEditingController();
   final _waterController = TextEditingController();
   String _fuelType = 'natural_gas';
+  String _tariff = 'PPA';
 
   @override
   Widget build(BuildContext context) {
@@ -362,6 +363,21 @@ class _EnergyScreenState extends State<EnergyScreen> {
                 ),
                 SizedBox(height: 24),
 
+                // Tariff type dropdown
+                Text('Tariff type',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _tariff,
+                  decoration: InputDecoration(),
+                  items: [
+                    DropdownMenuItem(value: 'standard', child: Text('Standard Tariff')),
+                    DropdownMenuItem(value: 'PPA', child: Text('PPA Tariff')),
+                  ],
+                  onChanged: (value) => setState(() => _tariff = value!),
+                ),
+                SizedBox(height: 24),
+
                 // Water usage
                 Text('Annual water usage (m³)',
                     style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
@@ -383,6 +399,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       profile.fuelType = _fuelType;
+                      profile.tariff = _tariff;
                       profile.annualGasKwh = double.tryParse(_gasController.text) ?? 0;
                       profile.annualElectricityKwh = double.tryParse(_electricityController.text) ?? 0;
                       profile.annualWaterM3 = double.tryParse(_waterController.text) ?? 0;
@@ -1806,7 +1823,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
     try {
       final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/calculate'),
+        Uri.parse('https://netzero-production.up.railway.app/calculate'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(profile.toProfile()),
       );

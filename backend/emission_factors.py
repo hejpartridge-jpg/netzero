@@ -48,6 +48,11 @@ def _get(question: str, f1: str = None, f2: str = None, f3: str = None) -> float
 # ── ELECTRICITY ────────────────────────────────────────────────────────────
 ELECTRICITY_FACTOR = _get("Electricity Usage (from grid)")
 
+ELECTRICITY_TARIFF_FACTORS = {
+    "standard":  ELECTRICITY_FACTOR,
+    "PPA": 0.01718,
+}
+
 # ── GAS ────────────────────────────────────────────────────────────────────
 GAS_FACTORS = {
     "lpg":         _get("Annual Gas usage (gross)", "LPG"),
