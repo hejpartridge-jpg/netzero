@@ -14,11 +14,14 @@ def calculate_gas_emissions(annual_kwh: float, fuel_type: str) -> float:
     return annual_kwh * factor
 
 
-def calculate_electricity_emissions(annual_kwh: float, tariff: str,) -> float:
-    factor = ELECTRICITY_TARIFF_FACTORS.get(tariff)
-    if factor is None:
+def calculate_electricity_emissions(annual_kwh: float, tariff: str = "standard", solar_self_consumed_kwh: float = 0) -> float:
+    grid_kwh = max(0, annual_kwh - solar_self_consumed_kwh)
+    tariff_factor = ELECTRICITY_TARIFF_FACTORS.get(tariff)
+    if tariff_factor is None:
         raise ValueError(f"Unknown tariff type: '{tariff}'. Must be 'standard', or 'PPA'")
-    return annual_kwh * factor
+    grid_emissions = grid_kwh * tariff_factor
+    solar_emissions = solar_self_consumed_kwh * SOLAR_FACTOR
+    return grid_emissions + solar_emissions
 
 
 def calculate_water_emissions(annual_m3: float) -> float:

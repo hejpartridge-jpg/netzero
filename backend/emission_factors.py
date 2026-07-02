@@ -53,6 +53,19 @@ ELECTRICITY_TARIFF_FACTORS = {
     "PPA": 0.01718,
 }
 
+SOLAR_FACTOR = 0.045  # kg CO2e per kWh, self-consumed solar
+
+SOLAR_SYSTEM_SIZE_KW = {
+    "terraced": 3.75,
+    "semi_detached": 5.75,
+    "detached": 8.5,
+    "bungalow": 8.5,      # counts as detached
+    # "flat" deliberately excluded — not eligible for solar
+}
+
+SOLAR_YEARLY_SUNLIGHT_HOURS = 1600 #average, V2 will be more specific
+SOLAR_SELF_CONSUMPTION_RATE = 0.5
+
 # ── GAS ────────────────────────────────────────────────────────────────────
 GAS_FACTORS = {
     "lpg":         _get("Annual Gas usage (gross)", "LPG"),

@@ -50,7 +50,8 @@ def calculate_total_emissions(profile: dict) -> dict:
                     profile["fuel_type"])
     elec_co2  = calculate_electricity_emissions(
                     profile["annual_electricity_kwh"],
-                    profile["tariff"])
+                    profile["tariff"],
+                    profile.get("solar_self_consumed_kwh", 0))
     water_co2 = calculate_water_emissions(
                     profile["annual_water_m3"])
 
