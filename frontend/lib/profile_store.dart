@@ -10,6 +10,7 @@ class ProfileStore extends ChangeNotifier {
   double annualGasKwh = 0;
   String fuelType = 'natural_gas';
   double annualElectricityKwh = 0;
+  double annualSolarKwh = 0;
   String tariff = 'PPA';
   double annualWaterM3 = 0;
 
@@ -60,6 +61,7 @@ class ProfileStore extends ChangeNotifier {
       'fuel_type':                fuelType,
       'annual_electricity_kwh':   annualElectricityKwh,
       'tariff':                   tariff,
+      'solar_self_consumed_kwh':  annualSolarKwh,
       'annual_water_m3':          annualWaterM3,
       'weekly_mileage':           weeklyMileage,
       'car_fuel':                 carFuel,

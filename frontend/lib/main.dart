@@ -279,6 +279,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
   final _gasController = TextEditingController();
   final _electricityController = TextEditingController();
   final _waterController = TextEditingController();
+  final _solarController = TextEditingController();
   String _fuelType = 'natural_gas';
   String _tariff = 'PPA';
 
@@ -289,134 +290,162 @@ class _EnergyScreenState extends State<EnergyScreen> {
     return Scaffold(
       body: SafeArea(
         child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
 
-                SizedBox(height: 0),
+                  SizedBox(height: 0),
 
-                Text(
-                  'Home Energy',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-
-                progressBar(0.2),
-                SizedBox(height: 24),
-
-                Text(
-                  'How much energy does your home use?',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Find these figures on your energy bills.',
-                  style: TextStyle(color: kTextSubtle),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 32),
-
-                // Fuel type dropdown
-                Text('Heating fuel type',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _fuelType,
-                  decoration: InputDecoration(),
-                  items: [
-                    DropdownMenuItem(value: 'natural_gas', child: Text('Natural Gas')),
-                    DropdownMenuItem(value: 'lpg', child: Text('LPG')),
-                  ],
-                  onChanged: (value) => setState(() => _fuelType = value!),
-                ),
-                SizedBox(height: 24),
-
-                // Gas usage
-                Text('Annual gas usage (kWh)',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _gasController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 12000',
-                    suffixText: 'kWh',
+                  Text(
+                    'Home Energy',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: 24),
+                  SizedBox(height: 12),
 
-                // Electricity usage
-                Text('Annual electricity usage (kWh)',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _electricityController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 3100',
-                    suffixText: 'kWh',
+                  progressBar(0.2),
+                  SizedBox(height: 24),
+
+                  Text(
+                    'How much energy does your home use?',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: 24),
-
-                // Tariff type dropdown
-                Text('Tariff type',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _tariff,
-                  decoration: InputDecoration(),
-                  items: [
-                    DropdownMenuItem(value: 'standard', child: Text('Standard Tariff')),
-                    DropdownMenuItem(value: 'PPA', child: Text('PPA Tariff')),
-                  ],
-                  onChanged: (value) => setState(() => _tariff = value!),
-                ),
-                SizedBox(height: 24),
-
-                // Water usage
-                Text('Annual water usage (m³)',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _waterController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 100',
-                    suffixText: 'm³',
+                  SizedBox(height: 8),
+                  Text(
+                    'Find these figures on your energy bills.',
+                    style: TextStyle(color: kTextSubtle),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  SizedBox(height: 32),
 
-                Spacer(),
+                  // Fuel type dropdown
+                  Text('Heating fuel type',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _fuelType,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'natural_gas', child: Text('Natural Gas')),
+                      DropdownMenuItem(value: 'lpg', child: Text('LPG')),
+                    ],
+                    onChanged: (value) => setState(() => _fuelType = value!),
+                  ),
+                  SizedBox(height: 24),
 
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      profile.fuelType = _fuelType;
-                      profile.tariff = _tariff;
-                      profile.annualGasKwh = double.tryParse(_gasController.text) ?? 0;
-                      profile.annualElectricityKwh = double.tryParse(_electricityController.text) ?? 0;
-                      profile.annualWaterM3 = double.tryParse(_waterController.text) ?? 0;
-                      profile.update();
-                      context.go('/transport');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  // Gas usage
+                  Text('Annual gas usage (kWh)',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _gasController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 12000',
+                      suffixText: 'kWh',
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 24),
+
+                  // Electricity usage
+                  Text('Annual electricity usage (kWh)',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  Text(
+                    'Energy you buy from the grid, plus any additional energy you consume from solar panels.',
+                    style: TextStyle(color: kTextSubtle),
+                    textAlign: TextAlign.center,
+                  ),
+                  TextField(
+                    controller: _electricityController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 3100',
+                      suffixText: 'kWh',
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Tariff type dropdown
+                  Text('Tariff type',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _tariff,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'standard', child: Text('Standard Tariff')),
+                      DropdownMenuItem(value: 'PPA', child: Text('PPA Tariff')),
+                    ],
+                    onChanged: (value) => setState(() => _tariff = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Solar usage
+                  Text('Annual electricity you consume from any solar panels (kWh)',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  Text(
+                    'Energy you use NOT energy you export.',
+                    style: TextStyle(color: kTextSubtle),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _solarController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 2000',
+                      suffixText: 'kWh',
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Water usage
+                  Text('Annual water usage (m³)',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _waterController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 100',
+                      suffixText: 'm³',
+                    ),
+                  ),
+
+                  SizedBox(height: 32),
+
+                  // Next button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.fuelType = _fuelType;
+                        profile.tariff = _tariff;
+                        profile.annualGasKwh = double.tryParse(_gasController.text) ?? 0;
+                        profile.annualElectricityKwh = double.tryParse(_electricityController.text) ?? 0;
+                        profile.annualSolarKwh = double.tryParse(_solarController.text) ?? 0;
+                        profile.annualWaterM3 = double.tryParse(_waterController.text) ?? 0;
+                        profile.update();
+                        context.go('/transport');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Next →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
