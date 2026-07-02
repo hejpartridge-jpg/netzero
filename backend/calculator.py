@@ -116,7 +116,7 @@ def calculate_total_emissions(profile: dict) -> dict:
                       furniture_co2 + services_co2)
 
     grand_total = home_total + transport_total + diet_total + waste_total + pet_total + spending_total
-    total_trees = grand_total // 20
+    total_trees = int(grand_total // 20)
 
     return {
         "total_kg_co2e": grand_total,

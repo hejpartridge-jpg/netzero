@@ -59,6 +59,7 @@ class ProfileStore extends ChangeNotifier {
       'annual_gas_kwh':           annualGasKwh,
       'fuel_type':                fuelType,
       'annual_electricity_kwh':   annualElectricityKwh,
+      'tariff':                   tariff,
       'annual_water_m3':          annualWaterM3,
       'weekly_mileage':           weeklyMileage,
       'car_fuel':                 carFuel,
