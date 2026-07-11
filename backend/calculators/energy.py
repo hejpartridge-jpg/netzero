@@ -15,7 +15,7 @@ def calculate_gas_emissions(annual_kwh: float, fuel_type: str) -> float:
     It is a calculation function which will be called in a separate location
     """
     if fuel_type == "heat_pump":
-    return 0
+        return 0
     else:
         factor = GAS_FACTORS.get(fuel_type)    
         if factor is None:
