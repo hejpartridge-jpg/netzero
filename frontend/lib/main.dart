@@ -28,6 +28,12 @@ final _router = GoRouter(
     GoRoute(path: '/pets',         builder: (context, state) => PetsScreen()),
     GoRoute(path: '/spending',     builder: (context, state) => SpendingScreen()),
     GoRoute(path: '/results',      builder: (context, state) => ResultsScreen()),
+    GoRoute(path: '/quiz',         builder: (context, state) => QuizScreen()),
+    GoRoute(path: '/energyaction', builder: (context, state) => EnergyActionScreen()),
+    GoRoute(path: '/homeinfo',     builder: (context, state) => HomeInfoScreen()),
+    GoRoute(path: '/insulation',   builder: (context, state) => InsulationScreen()),
+    GoRoute(path: '/habit',        builder: (context, state) => HabitScreen()),
+    GoRoute(path: '/actions',      builder: (context, state) => ActionScreen()),
   ],
 );
 
@@ -332,6 +338,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     items: [
                       DropdownMenuItem(value: 'natural_gas', child: Text('Natural Gas')),
                       DropdownMenuItem(value: 'lpg', child: Text('LPG')),
+                      DropdownMenuItem(value: 'heat_pump', child: Text('No gas, just a heat pump')),
                     ],
                     onChanged: (value) => setState(() => _fuelType = value!),
                   ),
@@ -387,7 +394,8 @@ class _EnergyScreenState extends State<EnergyScreen> {
 
                   // Solar usage
                   Text('Annual electricity you consume from any solar panels (kWh)',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
                   SizedBox(height: 8),
                   Text(
                     'Energy you use NOT energy you export.',
@@ -1993,18 +2001,34 @@ class _ResultsScreenState extends State<ResultsScreen> {
           ),
         ),
 
-        // Start again button
+        // Start again and Quiz buttons
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () => context.go('/welcome'),
+            onPressed: () => context.go('/your-first-quiz-route'),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 18),
               shape: StadiumBorder(),
             ),
             child: Text(
-              'Start Again',
+              'See how to reduce your footprint',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+        SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => context.go('/welcome'),
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              side: BorderSide(color: kPrimary),
+              shape: StadiumBorder(),
+            ),
+            child: Text(
+              'Start Again',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kPrimary),
             ),
           ),
         ),
@@ -2041,6 +2065,707 @@ class _ResultsScreenState extends State<ResultsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Quiz Screen ─────────────────────────────────────────────────────────
+class QuizScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Logo/icon
+                Icon(
+                  Icons.eco,
+                  size: 64,
+                  color: kPrimary,
+                ),
+                SizedBox(height: 32),
+
+                // Title
+                Text(
+                  'Carbon Reduction Quiz',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    height: 1.1,
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Subtitle
+                Text(
+                  'A short quiz about your habits and household to identify the most effective emission reduction actions!',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: kTextSubtle,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 48),
+
+                // Start button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/energyaction'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimary,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Get Started',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Time estimate
+                Center(
+                  child: Text(
+                    'Takes about 10 minutes',
+                    style: TextStyle(color: kTextSubtle),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),   
+      ),     
+    );       
+  }
+}
+
+// ── Energy Action Screen ────────────────────────────────────────────────
+class EnergyActionScreen extends StatefulWidget {
+  @override
+  _EnergyActionScreenState createState() => _EnergyActionScreenState();
+}
+
+class _EnergyActionScreenState extends State<EnergyActionScreen> {
+  bool _smartThermostat = false;
+  bool _savingSockets = false;
+  bool _solarPanels = false;
+  bool _batteryStorage = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: 0),
+                  Text(
+                    'Energy Actions',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 12),
+                  progressBar(0.25),
+                  SizedBox(height: 24),
+
+                  Text(
+                    'Which of these do you already have?',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'This stops us recommending things you\'ve already done.',
+                    style: TextStyle(color: kTextSubtle),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 24),
+
+                  CheckboxListTile(
+                    value: _smartThermostat,
+                    onChanged: (value) => setState(() => _smartThermostat = value!),
+                    title: Text('Smart thermostat', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _savingSockets,
+                    onChanged: (value) => setState(() => _savingSockets = value!),
+                    title: Text('Energy-saving sockets', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _solarPanels,
+                    onChanged: (value) => setState(() => _solarPanels = value!),
+                    title: Text('Solar panels', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  // Battery storage only makes sense if solar is already installed -
+                  // worth deciding later whether to hide this unless _solarPanels is
+                  // ticked, but leaving it visible for now to keep this screen simple.
+                  CheckboxListTile(
+                    value: _batteryStorage,
+                    onChanged: (value) => setState(() => _batteryStorage = value!),
+                    title: Text('Battery storage', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+
+                  SizedBox(height: 32),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.smartThermostat = _smartThermostat;
+                        profile.savingSockets = _savingSockets;
+                        profile.solarPanels = _solarPanels;
+                        profile.batteryStorage = _batteryStorage;
+                        profile.update();
+                        context.go('/homeinfo');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Next →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Home Info Screen ────────────────────────────────────────────────────
+class HomeInfoScreen extends StatefulWidget {
+  @override
+  _HomeInfoScreenState createState() => _HomeInfoScreenState();
+}
+
+class _HomeInfoScreenState extends State<HomeInfoScreen> {
+  String _hobType = 'gas';
+  final _incandescentController = TextEditingController(text: '0');
+  final _cflController = TextEditingController(text: '0');
+  final _ledController = TextEditingController(text: '0');
+  String _propertyType = 'semi_detached';
+  String _boilerAge = '10-15';
+  // NOTE: default kept as 'power_mixer' to match your ProfileStore default,
+  // but energyr.py's shorter_shower_apply/water_saving_shower_apply only ever
+  // check equality against the literal string "electric_shower" - so as long
+  // as that exact value is one of the two options below, the non-electric
+  // option's name doesn't affect the calculation either way.
+  String _showerType = 'power_mixer';
+  bool _savingShower = false;
+  String _wallType = 'cavity';
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: 0),
+                  Text(
+                    'Home Info',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 12),
+                  progressBar(0.5),
+                  SizedBox(height: 24),
+
+                  Text(
+                    'Tell us about your property',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32),
+
+                  // Property type
+                  Text('Property type',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _propertyType,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'detached', child: Text('Detached')),
+                      DropdownMenuItem(value: 'semi_detached', child: Text('Semi-Detached')),
+                      DropdownMenuItem(value: 'terraced', child: Text('Terraced')),
+                      DropdownMenuItem(value: 'bungalow', child: Text('Bungalow')),
+                      DropdownMenuItem(value: 'flat', child: Text('Flat')),
+                    ],
+                    onChanged: (value) => setState(() => _propertyType = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Wall type
+                  Text('What type of walls does your property have?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 4),
+                  Text(
+                    'Not sure? Cavity walls have bricks of all the same size; solid walls are typically found in older properties and have different sized bricks.',
+                    style: TextStyle(color: kTextSubtle, fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _wallType,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'cavity', child: Text('Cavity wall')),
+                      DropdownMenuItem(value: 'solid_wall', child: Text('Solid wall')),
+                    ],
+                    onChanged: (value) => setState(() => _wallType = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Hob type
+                  Text('What type of hob do you cook with?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _hobType,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'gas', child: Text('Gas')),
+                      DropdownMenuItem(value: 'electric', child: Text('Electric')),
+                    ],
+                    onChanged: (value) => setState(() => _hobType = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Boiler age
+                  Text('How old is your boiler?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _boilerAge,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: '< 10', child: Text('Less than 10 years')),
+                      DropdownMenuItem(value: '10-15', child: Text('10-15 years')),
+                      DropdownMenuItem(value: '15-20', child: Text('15-20 years')),
+                      DropdownMenuItem(value: '20-25', child: Text('20-25 years')),
+                      DropdownMenuItem(value: '> 25', child: Text('More than 25 years')),
+                    ],
+                    onChanged: (value) => setState(() => _boilerAge = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Bulb counts
+                  Text('How many incandescent (old-style) bulbs do you have?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _incandescentController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: 'e.g. 4'),
+                  ),
+                  SizedBox(height: 24),
+
+                  Text('How many CFL (energy-saving spiral or fluorescent) bulbs do you have?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _cflController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: 'e.g. 2'),
+                  ),
+                  SizedBox(height: 24),
+
+                  Text('How many LED bulbs do you have?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _ledController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: 'e.g. 6'),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Shower type
+                  Text('What type of shower do you have?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _showerType,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'power_mixer', child: Text('Power Or A Mixer Shower')),
+                      DropdownMenuItem(value: 'electric_shower', child: Text('Electric Shower')),
+                    ],
+                    onChanged: (value) => setState(() => _showerType = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  CheckboxListTile(
+                    value: _savingShower,
+                    onChanged: (value) => setState(() => _savingShower = value!),
+                    title: Text('I already have a water-saving shower head',
+                        style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+
+                  SizedBox(height: 32),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.hobType = _hobType;
+                        profile.incandescentBulbs = int.tryParse(_incandescentController.text) ?? 0;
+                        profile.cflBulbs = int.tryParse(_cflController.text) ?? 0;
+                        profile.ledBulbs = int.tryParse(_ledController.text) ?? 0;
+                        profile.propertyType = _propertyType;
+                        profile.boilerAge = _boilerAge;
+                        profile.showerType = _showerType;
+                        profile.savingShower = _savingShower;
+                        profile.wallType = _wallType;
+                        profile.update();
+                        context.go('/insulation');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Next →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Insulation Screen ───────────────────────────────────────────────────
+class InsulationScreen extends StatefulWidget {
+  @override
+  _InsulationScreenState createState() => _InsulationScreenState();
+}
+
+class _InsulationScreenState extends State<InsulationScreen> {
+  String _insulationThickness = '0mm';
+  bool _windowDP = false;
+  bool _doorDP = false;
+  bool _cylinderJacket = false;
+  bool _radiatorPanels = false;
+  bool _wallInsulation = false;
+  bool _floorInsulation = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: 0),
+                  Text(
+                    'Insulation',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 12),
+                  progressBar(0.75),
+                  SizedBox(height: 24),
+
+                  Text(
+                    'Your insulation situation',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32),
+
+                  // Loft insulation thickness
+                  Text('Loft insulation thickness',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _insulationThickness,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: '0mm', child: Text('None / no insulation')),
+                      DropdownMenuItem(value: '100mm', child: Text('Some insulation (around 100mm)')),
+                      DropdownMenuItem(value: '270mm', child: Text('Well insulated (270mm, current standard)')),
+                    ],
+                    onChanged: (value) => setState(() => _insulationThickness = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  Text('Which of these do you already have?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+
+                  CheckboxListTile(
+                    value: _windowDP,
+                    onChanged: (value) => setState(() => _windowDP = value!),
+                    title: Text('Window draught-proofing', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _doorDP,
+                    onChanged: (value) => setState(() => _doorDP = value!),
+                    title: Text('Door draught-proofing', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _cylinderJacket,
+                    onChanged: (value) => setState(() => _cylinderJacket = value!),
+                    title: Text('Water cylinder jacket', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _radiatorPanels,
+                    onChanged: (value) => setState(() => _radiatorPanels = value!),
+                    title: Text('Reflective radiator panels', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _wallInsulation,
+                    onChanged: (value) => setState(() => _wallInsulation = value!),
+                    title: Text('Wall insulation', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _floorInsulation,
+                    onChanged: (value) => setState(() => _floorInsulation = value!),
+                    title: Text('Floor insulation', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+
+                  SizedBox(height: 32),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.insulationThickness = _insulationThickness;
+                        profile.windowDP = _windowDP;
+                        profile.doorDP = _doorDP;
+                        profile.cylinderJacket = _cylinderJacket;
+                        profile.radiatorPanels = _radiatorPanels;
+                        profile.wallInsulation = _wallInsulation;
+                        profile.floorInsulation = _floorInsulation;
+                        profile.update();
+                        context.go('/habit');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Next →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Habit Screen ────────────────────────────────────────────────────────
+class HabitScreen extends StatefulWidget {
+  @override
+  _HabitScreenState createState() => _HabitScreenState();
+}
+
+class _HabitScreenState extends State<HabitScreen> {
+  final _showerTimeController = TextEditingController(text: '5');
+  String _radiatorBleeding = 'this_year';
+  final _washingController = TextEditingController(text: '1');
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(height: 0),
+                  Text(
+                    'Habits',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 12),
+                  progressBar(1.0),
+                  SizedBox(height: 24),
+
+                  Text(
+                    'A few quick habits',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32),
+
+                  Text('Average total minutes spent in the shower as a household per day',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _showerTimeController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 30',
+                      suffixText: 'minutes',
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  Text('When did you last bleed your radiators?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _radiatorBleeding,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'never', child: Text('Never')),
+                      DropdownMenuItem(value: 'over_a_year_ago', child: Text('More than a year ago')),
+                      DropdownMenuItem(value: 'this_year', child: Text('Within the last year')),
+                    ],
+                    onChanged: (value) => setState(() => _radiatorBleeding = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  Text('How many times a week do you use your washing machine?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _washingController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: 'e.g. 2'),
+                  ),
+
+                  SizedBox(height: 32),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.showerTime = int.tryParse(_showerTimeController.text) ?? 0;
+                        profile.radiatorBleeding = _radiatorBleeding;
+                        profile.washingFrequency = int.tryParse(_washingController.text) ?? 0;
+                        profile.update();
+                        context.go('/actions');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'See My Recommendations →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Actions / Recommendations Screen (placeholder) ──────────────────────
+class ActionScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: Center(
+            child: Text(
+              'Recommendations coming soon',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kText),
+            ),
+          ),
+        ),
       ),
     );
   }

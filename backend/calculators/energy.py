@@ -1,4 +1,11 @@
 from emission_factors import GAS_FACTORS, ELECTRICITY_FACTOR, WATER_FACTOR
+from emission_factors import (
+    ELECTRICITY_FACTOR,
+    ELECTRICITY_TARIFF_FACTORS,
+    GAS_FACTORS,
+    SOLAR_FACTOR,
+    WATER_FACTOR,
+)
 
 def calculate_gas_emissions(annual_kwh: float, fuel_type: str) -> float:
     """
@@ -7,20 +14,24 @@ def calculate_gas_emissions(annual_kwh: float, fuel_type: str) -> float:
     It then looks up the emissions factor and multiplies it by the kwh
     It is a calculation function which will be called in a separate location
     """
-    factor = GAS_FACTORS.get(fuel_type)    
-    if factor is None:
-        raise ValueError(f"Unknown fuel type: '{fuel_type}'. Must be 'natural_gas' or 'lpg'")
+    if fuel_type == "heat_pump":
+    return 0
+    else:
+        factor = GAS_FACTORS.get(fuel_type)    
+        if factor is None:
+            raise ValueError(f"Unknown fuel type: '{fuel_type}'. Must be 'natural_gas' or 'lpg'")
     
-    return annual_kwh * factor
+        return annual_kwh * factor
 
 
 def calculate_electricity_emissions(annual_kwh: float, tariff: str = "standard", solar_self_consumed_kwh: float = 0) -> float:
     grid_kwh = max(0, annual_kwh - solar_self_consumed_kwh)
+    solar_kwh = annual_kwh - grid_kwh
     tariff_factor = ELECTRICITY_TARIFF_FACTORS.get(tariff)
     if tariff_factor is None:
         raise ValueError(f"Unknown tariff type: '{tariff}'. Must be 'standard', or 'PPA'")
     grid_emissions = grid_kwh * tariff_factor
-    solar_emissions = solar_self_consumed_kwh * SOLAR_FACTOR
+    solar_emissions = solar_kwh * SOLAR_FACTOR
     return grid_emissions + solar_emissions
 
 

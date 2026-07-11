@@ -1,0 +1,6 @@
+property type	loft big	loft small	cavity	solid wall	floor
+detached	1200	110	1200	1700	270
+semi detached	600	55	650	900	180
+terraced	460	45	360	480	130
+bungalow	1100	110	550	700	330
+flat	0	0	350	470	0

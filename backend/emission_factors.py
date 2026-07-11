@@ -72,6 +72,91 @@ GAS_FACTORS = {
     "natural_gas": _get("Annual Gas usage (gross)", "Natural Gas"),
 }
 
+BOILER_AGE = {
+    "< 10":   0.92,
+    "10-15":  0.825,
+    "15-20":  0.8,
+    "20-25":  0.75,
+    "> 25":   0.65
+}
+
+# ── INSULATION ────────────────────────────────────────────────────────────────────
+INSULATION_CO2_SAVING = {
+    "detached": {
+        "loft_big":   1200,
+        "loft_small": 110,
+        "cavity":     1200,
+        "solid_wall": 1700,
+        "floor":      270,
+    },
+    "semi_detached": {
+        "loft_big":   600,
+        "loft_small": 55,
+        "cavity":     650,
+        "solid_wall": 900,
+        "floor":      180,
+    },
+    "terraced": {
+        "loft_big":   460,
+        "loft_small": 45,
+        "cavity":     360,
+        "solid_wall": 480,
+        "floor":      130,
+    },
+    "bungalow": {
+        "loft_big":   1100,
+        "loft_small": 110,
+        "cavity":     550,
+        "solid_wall": 700,
+        "floor":      330,
+    },
+    "flat": {
+        "loft_big":   0,
+        "loft_small": 0,
+        "cavity":     350,
+        "solid_wall": 470,
+        "floor":      0,
+    },
+}
+
+INSULATION_KWH_SAVING = {
+    "detached": {
+        "loft_big":   5500,
+        "loft_small": 540,
+        "cavity":     5846,
+        "solid_wall": 7700,
+        "floor":      1300,
+    },
+    "semi_detached": {
+        "loft_big":   2900,
+        "loft_small": 260,
+        "cavity":     3000,
+        "solid_wall": 4300,
+        "floor":      850,
+    },
+    "terraced": {
+        "loft_big":   2200,
+        "loft_small": 200,
+        "cavity":     1700,
+        "solid_wall": 2300,
+        "floor":      620,
+    },
+    "bungalow": {
+        "loft_big":   5400,
+        "loft_small": 540,
+        "cavity":     2500,
+        "solid_wall": 3400,
+        "floor":      1500,
+    },
+    "flat": {
+        "loft_big":   0,
+        "loft_small": 0,
+        "cavity":     1700,
+        "solid_wall": 2200,
+        "floor":      0,
+    },
+}
+
 # ── WATER ──────────────────────────────────────────────────────────────────
 WATER_FACTOR = _get("Annual water usage")
 

@@ -162,3 +162,8 @@ class _TransportScreenState extends State<TransportScreen> {
   final _trainController = TextEditingController();
   String _fuelType = 'petrol';
   String _carSize = 'supermini';
+
+from reductions.reduction_calculations import (
+    heat_pumps_co2,
+)
+

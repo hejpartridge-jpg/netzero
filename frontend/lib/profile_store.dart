@@ -53,6 +53,37 @@ class ProfileStore extends ChangeNotifier {
   double yearlyFurniture = 0;
   double monthlyServices = 0;
 
+  // ── Energy Action Questions ───────────────────────────────────────────
+  bool smartThermostat = false;
+  bool savingSockets = false;
+  bool solarPanels = false;
+  bool batteryStorage = false;
+
+  // ── Home Info Questions ───────────────────────────────────────────
+  String hobType = 'gas';
+  int incandescentBulbs = 0;
+  int cflBulbs = 0;
+  int ledBulbs = 0;
+  String propertyType = 'semi_detached';
+  String boilerAge = '10-15';
+  String showerType = 'power_mixer';
+  bool savingShower = false;
+  String wallType = 'cavity';
+  
+  // ── Insulation Questions ───────────────────────────────────────────
+  String insulationThickness = '0mm';
+  bool windowDP = false;
+  bool doorDP = false;
+  bool cylinderJacket = false;
+  bool radiatorPanels = false;
+  bool wallInsulation = false;
+  bool floorInsulation = false;
+
+  // ── Habit Questions ──────────────────────────────────────────────────────────
+  int showerTime = 5;
+  String radiatorBleeding = 'this_year';
+  int washingFrequency = 1;
+
   // ── Convert to API profile dict ────────────────────────
   Map<String, dynamic> toProfile() {
     return {
@@ -90,6 +121,29 @@ class ProfileStore extends ChangeNotifier {
       'monthly_care':             monthlyCare,
       'yearly_furniture':         yearlyFurniture,
       'monthly_services':         monthlyServices,
+      'smart_thermostat':         smartThermostat,
+      'energy_saving_sockets':    savingSockets,
+      'solar_panels':             solarPanels,
+      'battery_storage':          batteryStorage,
+      'hob_type':                 hobType,
+      'incandescent_bulbs':       incandescentBulbs,
+      'cfl_bulbs':                cflBulbs,
+      'led_bulbs':                ledBulbs,
+      'property_type':            propertyType,
+      'boiler_age':               boilerAge,
+      'loft_thickness':           insulationThickness,
+      'window_draught_proofing':  windowDP,
+      'door_draught_proofing':    doorDP,
+      'water_cylinder_jacket':    cylinderJacket,
+      'radiator_panels':          radiatorPanels,   
+      'shower_type':              showerType,  
+      'water_saving_shower':      savingShower,
+      'wall_type':                wallType,
+      'wall_insulation':          wallInsulation,
+      'floor_insulation':         floorInsulation,
+      'shower_time':              showerTime,
+      'last_radiator_bleed':      radiatorBleeding,
+      'uses_per_week':            washingFrequency,
     };
   }
 
