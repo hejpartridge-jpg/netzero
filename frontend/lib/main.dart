@@ -5,6 +5,7 @@ import 'profile_store.dart';
 import 'theme.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(
@@ -351,6 +352,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   TextField(
                     controller: _gasController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
                       hintText: 'e.g. 12000',
                       suffixText: 'kWh',
@@ -370,6 +372,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   TextField(
                     controller: _electricityController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
                       hintText: 'e.g. 3100',
                       suffixText: 'kWh',
@@ -406,6 +409,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   TextField(
                     controller: _solarController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
                       hintText: 'e.g. 2000',
                       suffixText: 'kWh',
@@ -420,6 +424,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   TextField(
                     controller: _waterController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
                       hintText: 'e.g. 100',
                       suffixText: 'm³',
@@ -656,6 +661,7 @@ class _TransportScreenState extends State<TransportScreen> {
                 TextField(
                   controller: _mileageController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                   decoration: InputDecoration(
                     hintText: 'e.g. 150',
                     suffixText: 'miles',
@@ -670,6 +676,7 @@ class _TransportScreenState extends State<TransportScreen> {
                 TextField(
                   controller: _busController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                   decoration: InputDecoration(
                     hintText: 'e.g. 20',
                     suffixText: '£',
@@ -684,6 +691,7 @@ class _TransportScreenState extends State<TransportScreen> {
                 TextField(
                   controller: _trainController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                   decoration: InputDecoration(
                     hintText: 'e.g. 25',
                     suffixText: '£',
@@ -1365,6 +1373,7 @@ class _DietScreenState extends State<DietScreen> {
                 TextField(
                   controller: _shoppingController,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                   decoration: InputDecoration(
                     hintText: 'e.g. £60',
                     suffixText: 'per week',
@@ -1826,6 +1835,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
           TextField(
             controller: controller,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
             decoration: InputDecoration(
               isDense: true,
               hintText: '0',
@@ -2005,7 +2015,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () => context.go('/your-first-quiz-route'),
+            onPressed: () => context.go('/quiz'),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 18),
               shape: StadiumBorder(),
@@ -2160,6 +2170,7 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
   bool _savingSockets = false;
   bool _solarPanels = false;
   bool _batteryStorage = false;
+  bool _savingShower = false;
 
   @override
   Widget build(BuildContext context) {
@@ -2221,13 +2232,18 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
                     controlAffinity: ListTileControlAffinity.leading,
                     contentPadding: EdgeInsets.zero,
                   ),
-                  // Battery storage only makes sense if solar is already installed -
-                  // worth deciding later whether to hide this unless _solarPanels is
-                  // ticked, but leaving it visible for now to keep this screen simple.
                   CheckboxListTile(
                     value: _batteryStorage,
                     onChanged: (value) => setState(() => _batteryStorage = value!),
                     title: Text('Battery storage', style: TextStyle(color: kText)),
+                    activeColor: kPrimary,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  CheckboxListTile(
+                    value: _savingShower,
+                    onChanged: (value) => setState(() => _savingShower = value!),
+                    title: Text('Water-saving shower head', style: TextStyle(color: kText)),
                     activeColor: kPrimary,
                     controlAffinity: ListTileControlAffinity.leading,
                     contentPadding: EdgeInsets.zero,
@@ -2243,6 +2259,7 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
                         profile.savingSockets = _savingSockets;
                         profile.solarPanels = _solarPanels;
                         profile.batteryStorage = _batteryStorage;
+                        profile.savingShower = _savingShower;
                         profile.update();
                         context.go('/homeinfo');
                       },
@@ -2279,13 +2296,7 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
   final _ledController = TextEditingController(text: '0');
   String _propertyType = 'semi_detached';
   String _boilerAge = '10-15';
-  // NOTE: default kept as 'power_mixer' to match your ProfileStore default,
-  // but energyr.py's shorter_shower_apply/water_saving_shower_apply only ever
-  // check equality against the literal string "electric_shower" - so as long
-  // as that exact value is one of the two options below, the non-electric
-  // option's name doesn't affect the calculation either way.
   String _showerType = 'power_mixer';
-  bool _savingShower = false;
   String _wallType = 'cavity';
 
   @override
@@ -2318,7 +2329,6 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   ),
                   SizedBox(height: 32),
 
-                  // Property type
                   Text('Property type',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
@@ -2336,13 +2346,12 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   ),
                   SizedBox(height: 24),
 
-                  // Wall type
                   Text('What type of walls does your property have?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText),
                       textAlign: TextAlign.center),
                   SizedBox(height: 4),
                   Text(
-                    'Not sure? Cavity walls have bricks of all the same size; solid walls are typically found in older properties and have different sized bricks.',
+                    'Not sure? Cavity walls have a small gap inside; solid walls are typically found in older properties (pre-1930s).',
                     style: TextStyle(color: kTextSubtle, fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
@@ -2358,7 +2367,6 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   ),
                   SizedBox(height: 24),
 
-                  // Hob type
                   Text('What type of hob do you cook with?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
@@ -2373,7 +2381,6 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   ),
                   SizedBox(height: 24),
 
-                  // Boiler age
                   Text('How old is your boiler?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
@@ -2391,7 +2398,6 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   ),
                   SizedBox(height: 24),
 
-                  // Bulb counts
                   Text('How many incandescent (old-style) bulbs do you have?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText),
                       textAlign: TextAlign.center),
@@ -2399,17 +2405,19 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   TextField(
                     controller: _incandescentController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(hintText: 'e.g. 4'),
                   ),
                   SizedBox(height: 24),
 
-                  Text('How many CFL (energy-saving spiral or fluorescent) bulbs do you have?',
+                  Text('How many CFL (energy-saving spiral) bulbs do you have?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText),
                       textAlign: TextAlign.center),
                   SizedBox(height: 8),
                   TextField(
                     controller: _cflController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(hintText: 'e.g. 2'),
                   ),
                   SizedBox(height: 24),
@@ -2421,11 +2429,11 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   TextField(
                     controller: _ledController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(hintText: 'e.g. 6'),
                   ),
                   SizedBox(height: 24),
 
-                  // Shower type
                   Text('What type of shower do you have?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
@@ -2433,21 +2441,10 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                     value: _showerType,
                     decoration: InputDecoration(),
                     items: [
-                      DropdownMenuItem(value: 'power_mixer', child: Text('Power Or A Mixer Shower')),
+                      DropdownMenuItem(value: 'power_mixer', child: Text('Power / Mixer Shower')),
                       DropdownMenuItem(value: 'electric_shower', child: Text('Electric Shower')),
                     ],
                     onChanged: (value) => setState(() => _showerType = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  CheckboxListTile(
-                    value: _savingShower,
-                    onChanged: (value) => setState(() => _savingShower = value!),
-                    title: Text('I already have a water-saving shower head',
-                        style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
                   ),
 
                   SizedBox(height: 32),
@@ -2463,7 +2460,6 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                         profile.propertyType = _propertyType;
                         profile.boilerAge = _boilerAge;
                         profile.showerType = _showerType;
-                        profile.savingShower = _savingShower;
                         profile.wallType = _wallType;
                         profile.update();
                         context.go('/insulation');
@@ -2649,6 +2645,7 @@ class _HabitScreenState extends State<HabitScreen> {
   final _showerTimeController = TextEditingController(text: '5');
   String _radiatorBleeding = 'this_year';
   final _washingController = TextEditingController(text: '1');
+  String _washingTemp = '40';
 
   @override
   Widget build(BuildContext context) {
@@ -2680,15 +2677,16 @@ class _HabitScreenState extends State<HabitScreen> {
                   ),
                   SizedBox(height: 32),
 
-                  Text('Average total minutes spent in the shower as a household per day',
+                  Text('Average total minutes spent in the shower per person, per day',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText),
                       textAlign: TextAlign.center),
                   SizedBox(height: 8),
                   TextField(
                     controller: _showerTimeController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(
-                      hintText: 'e.g. 30',
+                      hintText: 'e.g. 7',
                       suffixText: 'minutes',
                     ),
                   ),
@@ -2717,10 +2715,27 @@ class _HabitScreenState extends State<HabitScreen> {
                   TextField(
                     controller: _washingController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration: InputDecoration(hintText: 'e.g. 2'),
                   ),
 
-                  SizedBox(height: 32),
+                  SizedBox(height: 24),
+
+                  Text('What temperature do you do your washing at?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                      textAlign: TextAlign.center),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _washingTemp,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: '30', child: Text('30°')),
+                      DropdownMenuItem(value: '40', child: Text('40°')),
+                      DropdownMenuItem(value: '60', child: Text('60°')),
+                    ],
+                    onChanged: (value) => setState(() => _washingTemp = value!),
+                  ),
+                  SizedBox(height: 24),
 
                   SizedBox(
                     width: double.infinity,
@@ -2729,6 +2744,7 @@ class _HabitScreenState extends State<HabitScreen> {
                         profile.showerTime = int.tryParse(_showerTimeController.text) ?? 0;
                         profile.radiatorBleeding = _radiatorBleeding;
                         profile.washingFrequency = int.tryParse(_washingController.text) ?? 0;
+                        profile.washingTemperature = _washingTemp;
                         profile.update();
                         context.go('/actions');
                       },
@@ -2752,21 +2768,228 @@ class _HabitScreenState extends State<HabitScreen> {
   }
 }
 
-// ── Actions / Recommendations Screen (placeholder) ──────────────────────
-class ActionScreen extends StatelessWidget {
+// ── Actions / Recommendations Screen ───────────────────────────────────────────
+class ActionScreen extends StatefulWidget { //create a state where this screen can always live
   @override
-  Widget build(BuildContext context) {
+  _ActionScreenState createState() => _ActionScreenState();
+}
+
+//create a state which is changing. The changing thing is attached to the stationary thing, but the changing on is a placeholder
+class _ActionScreenState extends State<ActionScreen> { 
+
+  bool _loading = true; // when the screen is set up it is loading. Once it is working this goes to false
+  String? _error; //either there is no error so this value is null (?) or there is an error. At the start there is no error so this is null, but if something happens i could give the error a value
+  Map<String, dynamic>? _actions; //at the beginning I haven't called anything from the backend so actions is null. Later, I will call something so it won't be null anymore. Also there is no map so the map fuction is null.
+  List<Map<String, dynamic>> _queue = [];
+
+  @override
+  void initState() { //initState() is darts standard screen builder. I am saying void this and have my code there in place
+    super.initState(); // flutters setup
+    _getActions();  
+  }
+
+  Future<void> _getActions() async { // a specific value won't come back but stuff will happen and will get stored in actions (async means there will be pauses as stuff happens and thats okay)
+    final profile = Provider.of<ProfileStore>(context, listen: false); //dart profile stores all of the user inputs, listen: false tells the program to not keep watching for changes
+    try {
+      final response = await http.post( // await the response
+        Uri.parse('https://netzero-production.up.railway.app/recommendations'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({ //so the dart and python can be translated
+          'profile': profile.toProfile(), // converts every field recieved from profile into something that python can read (the quiz answers)
+          'completed_actions': profile.completedActions, //what they have already done
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _actions = jsonDecode(response.body); // if it works, change actions to match the response
+          _loading = false;
+          _queue = List<Map<String, dynamic>>.from(_actions!['recommendations']);
+          
+        });
+      } 
+      else {
+        setState(() {
+          _error = 'Server error: ${response.statusCode}'; //if it fails give an error message
+          _loading = false;
+        });
+      }
+    }
+    catch (e) { //if there is an unexpected error, show this message
+      setState(() {
+        _error = 'Could not connect to server. Is the backend running?';
+        _loading = false;
+      });
+    }
+  }
+
+
+  @override
+  // creating a specific widget on this screen
+  Widget build(BuildContext context) { // widget is like a int or string.
     return Scaffold(
       body: SafeArea(
         child: screenWrapper(
-          child: Center(
-            child: Text(
-              'Recommendations coming soon',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kText),
-            ),
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: _loading
+                ? Center(child: CircularProgressIndicator(color: kPrimary)) //? means if true
+                : _error != null //: means if false
+                    ? _buildError()
+                    : _buildResults(),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: kTextSubtle, size: 48),
+          SizedBox(height: 16),
+          Text(_error!, //! means its not null at this point
+              textAlign: TextAlign.center,
+              style: TextStyle(color: kTextSubtle)),
+          SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _loading = true;
+                _error = null;
+              });
+              _getActions();
+            },
+            child: Text('Try again'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _skip() {
+    if (_queue.length <= 1) return;
+    setState(() {
+      _queue.add(_queue.removeAt(0));
+    });
+  }
+
+  Widget _buildResults() {
+    final currentTotal = (_actions!['current_total_kg_co2e'] as num).toDouble();
+    final totalSaved = (_actions!['total_saved_kg_co2e'] as num).toDouble();
+    final card = _queue.first;
+    final label = card['label'] as String;
+    final cost = card['cost'] as String;
+    final difficulty = card['difficulty'] as String;
+    final reduction = (card['reduction_kg_co2e'] as num).toDouble();
+
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: kPrimary.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: kPrimary),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Text('Saved so far', style: TextStyle(color: kTextSubtle, fontSize: 12)),
+                  SizedBox(height: 4),
+                  Text('${(totalSaved / 1000).toStringAsFixed(2)}t',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kText)),
+                ],
+              ),
+              Column(
+                children: [
+                  Text('Remaining footprint', style: TextStyle(color: kTextSubtle, fontSize: 12)),
+                  SizedBox(height: 4),
+                  Text('${(currentTotal / 1000).toStringAsFixed(2)}t',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kText)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 24),
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: kBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kText),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              Text(
+                '${reduction.toStringAsFixed(0)} kg CO₂e saved per year',
+                style: TextStyle(fontSize: 16, color: kTextSubtle),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Cost: $cost   •   Difficulty: $difficulty',
+                style: TextStyle(fontSize: 13, color: kTextSubtle),
+              ),
+              SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _skip,
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: kBorder),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Skip →',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _markDone,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimary,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Done ✓',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _markDone() async { // no question mark as it always produces a future
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final currentName = _queue.first['name'] as String;
+    profile.completedActions = [...profile.completedActions, currentName]; // ... unpacks the list from profile.completedActions
+    profile.update();
+    await _getActions();
   }
 }

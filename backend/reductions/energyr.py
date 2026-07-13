@@ -132,8 +132,12 @@ def heat_pumps_apply(global_state: dict, adjusted_state: dict, profile: dict) ->
 def reduce_wm_temperature_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_adjusted = adjusted_state.copy()
     uses_per_week = profile.get("uses_per_week")
+    temperature = profile.get("washing_temperature")
     washing_energy = uses_per_week * 52 * 1
-    reduction = washing_energy * 0.38  # 38% saving switching to 30 degrees
+    if temperature == "40":
+        reduction = washing_energy * 0.38  # 38% saving switching to 30 degrees
+    else:
+        reduction = washing_energy * 0.67
     new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
     return global_state, new_adjusted
 
@@ -315,7 +319,7 @@ def water_saving_shower_apply(global_state: dict, adjusted_state: dict, profile:
     num_people = global_state["num_people"]
     water_usage = global_state["annual_water_m3"]
     time = profile.get("shower_time")
-    shower_usage = time * num_people * 0.015
+    shower_usage = time * num_people * 0.015 * 365 # per-person daily minutes -> yearly household m3
     new_shower_usage = shower_usage * 0.48
     reduction = shower_usage - new_shower_usage
     new_global["annual_water_m3"] = water_usage - reduction

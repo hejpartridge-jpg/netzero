@@ -83,6 +83,10 @@ class ProfileStore extends ChangeNotifier {
   int showerTime = 5;
   String radiatorBleeding = 'this_year';
   int washingFrequency = 1;
+  String washingTemperature = '40';
+
+  // ── Action Tracking ─────────────────────────────────────────────────────────
+  List<String> completedActions = [];
 
   // ── Convert to API profile dict ────────────────────────
   Map<String, dynamic> toProfile() {
@@ -144,6 +148,7 @@ class ProfileStore extends ChangeNotifier {
       'shower_time':              showerTime,
       'last_radiator_bleed':      radiatorBleeding,
       'uses_per_week':            washingFrequency,
+      'washing_temperature':      washingTemperature,
     };
   }
 
