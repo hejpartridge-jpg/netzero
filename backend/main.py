@@ -21,8 +21,11 @@ def calculate(profile: dict) -> dict:
 
 @app.post("/recommendations")
 def recommendations(payload: dict) -> dict:
-    return get_recommendations(payload["profile"], payload.get("completed_actions", []))
-
+    return get_recommendations(
+        payload["profile"],
+        payload.get("completed_actions", []),
+        payload.get("dismissed_actions", []),
+    )
     
 @app.get("/")
 def root():

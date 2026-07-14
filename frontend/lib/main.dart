@@ -2797,6 +2797,7 @@ class _ActionScreenState extends State<ActionScreen> {
         body: jsonEncode({ //so the dart and python can be translated
           'profile': profile.toProfile(), // converts every field recieved from profile into something that python can read (the quiz answers)
           'completed_actions': profile.completedActions, //what they have already done
+          'dismissed_actions': profile.dismissedActions.map((a) => a['name']).toList(),
         }),
       );
       if (response.statusCode == 200) {
@@ -2825,17 +2826,19 @@ class _ActionScreenState extends State<ActionScreen> {
 
   @override
   // creating a specific widget on this screen
-  Widget build(BuildContext context) { // widget is like a int or string.
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
             padding: EdgeInsets.all(24.0),
             child: _loading
-                ? Center(child: CircularProgressIndicator(color: kPrimary)) //? means if true
-                : _error != null //: means if false
+                ? Center(child: CircularProgressIndicator(color: kPrimary))
+                : _error != null
                     ? _buildError()
-                    : _buildResults(),
+                    : _queue.isEmpty
+                        ? _buildAllDone()
+                        : _buildResults(),
           ),
         ),
       ),
@@ -2871,8 +2874,38 @@ class _ActionScreenState extends State<ActionScreen> {
   void _skip() {
     if (_queue.length <= 1) return;
     setState(() {
-      _queue.add(_queue.removeAt(0));
+      final skipped = _queue.removeAt(0);
+      final skippedCost = skipped['cost'];
+
+      int insertIndex = _queue.length;
+      for (int i = 0; i < _queue.length; i++) {
+        if (_queue[i]['cost'] != skippedCost) {
+          insertIndex = i;
+          break;
+        }
+      }
+      _queue.insert(insertIndex, skipped);
     });
+  }
+
+  void _dismiss() {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final dismissedCard = _queue.first;
+    setState(() {
+      _queue.removeAt(0);
+    });
+    profile.dismissedActions = [...profile.dismissedActions, dismissedCard];
+    profile.update();
+  }
+
+  Future<void> _restore(Map<String, dynamic> card) async {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    profile.dismissedActions = profile.dismissedActions
+        .where((a) => a['name'] != card['name'])
+        .toList();
+    profile.update();
+    Navigator.of(context).pop(); // close the dialog
+    await _getActions(); // re-fetch so the restored action reappears
   }
 
   Widget _buildResults() {
@@ -2886,6 +2919,14 @@ class _ActionScreenState extends State<ActionScreen> {
 
     return Column(
       children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: _showDismissed,
+            child: Text('View dismissed (${Provider.of<ProfileStore>(context, listen: false).dismissedActions.length})'),
+          ),
+        ),
+        SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: EdgeInsets.all(20),
@@ -2961,6 +3002,20 @@ class _ActionScreenState extends State<ActionScreen> {
                       ),
                     ),
                   ),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _dismiss,
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: kBorder),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Don\'t Show This Again',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      ),
+                    ),
+                  ),
                   SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
@@ -2984,6 +3039,65 @@ class _ActionScreenState extends State<ActionScreen> {
       ],
     );
   }
+
+  Widget _buildAllDone() {
+    final totalSaved = (_actions!['total_saved_kg_co2e'] as num).toDouble();
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.emoji_events, color: kPrimary, size: 64),
+          SizedBox(height: 16),
+          Text(
+            'You\'ve worked through every recommendation!',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kText),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Total saved: ${(totalSaved / 1000).toStringAsFixed(2)}t CO₂e',
+            style: TextStyle(fontSize: 16, color: kTextSubtle),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _showDismissed() {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    showDialog( 
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Not interested'),
+          content: profile.dismissedActions.isEmpty
+              ? Text('Nothing dismissed yet.')
+              : SizedBox(
+                  width: double.maxFinite,
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: profile.dismissedActions.map((card) {
+                      return ListTile(
+                        title: Text(card['label'] as String),
+                        trailing: TextButton(
+                          onPressed: () => _restore(card),
+                          child: Text('Restore'),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   Future<void> _markDone() async { // no question mark as it always produces a future
     final profile = Provider.of<ProfileStore>(context, listen: false);

@@ -304,6 +304,7 @@ def get_recommendations(profile: dict, completed_actions: list = None) -> dict:
     from the returned recommendations list.
     """
     completed_actions = completed_actions or []
+    dismissed_actions = dismissed_actions or []
 
     global_state, adjusted_state, co2_state = build_initial_state(profile)
     starting_total = co2_state["total_co2"]
@@ -328,6 +329,8 @@ def get_recommendations(profile: dict, completed_actions: list = None) -> dict:
     results = []
     for action in ACTIONS:
         if action["name"] in completed_actions:
+            continue
+        if action["name"] in dismissed_actions:
             continue
         if not action["eligible"](profile):
             continue

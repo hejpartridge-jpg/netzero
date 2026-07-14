@@ -87,6 +87,7 @@ class ProfileStore extends ChangeNotifier {
 
   // ── Action Tracking ─────────────────────────────────────────────────────────
   List<String> completedActions = [];
+  List<Map<String, dynamic>> dismissedActions = [];
 
   // ── Convert to API profile dict ────────────────────────
   Map<String, dynamic> toProfile() {
