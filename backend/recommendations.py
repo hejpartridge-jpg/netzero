@@ -283,7 +283,7 @@ _TIER_ORDER = {"free": 0, "cheap": 1, "expensive": 2}
 _ACTIONS_BY_NAME = {a["name"]: a for a in ACTIONS}
 
 
-def get_recommendations(profile: dict, completed_actions: list = None) -> dict:
+def get_recommendations(profile: dict, completed_actions: list = None, dismissed_actions: list = None) -> dict:
     """
     Returns:
     {
