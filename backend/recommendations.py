@@ -214,7 +214,7 @@ ACTIONS = [
         "co2_fn": loft_insulation_co2,
         "cost": "expensive",
         "difficulty": "hard",
-        "eligible": lambda p: p.get("loft_thickness") != "270mm",
+        "eligible": lambda p: p.get("loft_thickness") != "270mm" and p.get("homeowner") != "renter",
     },
     {
         "name": "cavity_insulation",
@@ -223,7 +223,7 @@ ACTIONS = [
         "cost": "expensive",
         "difficulty": "hard",
         "eligible": lambda p: (
-            p.get("wall_type") == "cavity" and not p.get("wall_insulation", False)
+            p.get("wall_type") == "cavity" and not p.get("wall_insulation", False) and p.get("homeowner") != "renter"
         ),
     },
     {
@@ -233,7 +233,7 @@ ACTIONS = [
         "cost": "expensive",
         "difficulty": "hard",
         "eligible": lambda p: (
-            p.get("wall_type") == "solid_wall" and not p.get("wall_insulation", False)
+            p.get("wall_type") == "solid_wall" and not p.get("wall_insulation", False) and p.get("homeowner") != "renter"
         ),
     },
     {
@@ -242,7 +242,7 @@ ACTIONS = [
         "co2_fn": floor_insulation_co2,
         "cost": "expensive",
         "difficulty": "hard",
-        "eligible": lambda p: not p.get("floor_insulation", False),
+        "eligible": lambda p: not p.get("floor_insulation", False) and p.get("homeowner") != "renter",
     },
     {
         "name": "solar_panels",
@@ -250,7 +250,7 @@ ACTIONS = [
         "co2_fn": solar_panels_co2,
         "cost": "expensive",
         "difficulty": "hard",
-        "eligible": lambda p: not p.get("solar_panels", False),
+        "eligible": lambda p: not p.get("solar_panels", False) and p.get("homeowner") != "renter",
     },
     {
         "name": "battery_storage",
@@ -258,7 +258,7 @@ ACTIONS = [
         "co2_fn": battery_storage_co2,
         "cost": "expensive",
         "difficulty": "medium",
-        "eligible": lambda p: p.get("solar_panels", False) and not p.get("battery_storage", False),
+        "eligible": lambda p: p.get("solar_panels", False) and not p.get("battery_storage", False) and p.get("homeowner") != "renter",
     },
     {
         "name": "heat_pump",
@@ -266,7 +266,7 @@ ACTIONS = [
         "co2_fn": heat_pumps_co2,
         "cost": "expensive",
         "difficulty": "hard",
-        "eligible": lambda p: p.get("fuel_type") != "heat_pump",
+        "eligible": lambda p: p.get("fuel_type") != "heat_pump" and p.get("homeowner") != "renter",
     },
     {
         "name": "electric_car",

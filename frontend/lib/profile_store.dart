@@ -85,6 +85,9 @@ class ProfileStore extends ChangeNotifier {
   int washingFrequency = 1;
   String washingTemperature = '40';
 
+  // ── Habit Questions ──────────────────────────────────────────────────────────
+  String homeowner = 'homeowner'
+
   // ── Action Tracking ─────────────────────────────────────────────────────────
   List<String> completedActions = [];
   List<Map<String, dynamic>> dismissedActions = [];
@@ -150,6 +153,7 @@ class ProfileStore extends ChangeNotifier {
       'last_radiator_bleed':      radiatorBleeding,
       'uses_per_week':            washingFrequency,
       'washing_temperature':      washingTemperature,
+      'homeowner':                homeowner,
     };
   }
 

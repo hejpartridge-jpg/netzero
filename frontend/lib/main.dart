@@ -21,6 +21,8 @@ final _router = GoRouter(
   initialLocation: '/welcome',
   routes: [
     GoRoute(path: '/welcome',      builder: (context, state) => WelcomeScreen()),
+    GoRoute(path: '/info',         builder: (context, state) => InfoScreen()),
+    GoRoute(path: '/phase1',       builder: (context, state) => Phase1Screen()),
     GoRoute(path: '/household',    builder: (context, state) => HouseholdScreen()),
     GoRoute(path: '/energy',       builder: (context, state) => EnergyScreen()),
     GoRoute(path: '/transport',    builder: (context, state) => TransportScreen()),
@@ -29,11 +31,14 @@ final _router = GoRouter(
     GoRoute(path: '/pets',         builder: (context, state) => PetsScreen()),
     GoRoute(path: '/spending',     builder: (context, state) => SpendingScreen()),
     GoRoute(path: '/results',      builder: (context, state) => ResultsScreen()),
+    GoRoute(path: '/phase2',       builder: (context, state) => Phase2Screen()),
     GoRoute(path: '/quiz',         builder: (context, state) => QuizScreen()),
     GoRoute(path: '/energyaction', builder: (context, state) => EnergyActionScreen()),
     GoRoute(path: '/homeinfo',     builder: (context, state) => HomeInfoScreen()),
     GoRoute(path: '/insulation',   builder: (context, state) => InsulationScreen()),
     GoRoute(path: '/habit',        builder: (context, state) => HabitScreen()),
+    GoRoute(path: '/homeowner',    builder: (context, state) => HomeownerScreen()),
+    GoRoute(path: '/phase3',       builder: (context, state) => Phase3Screen()),
     GoRoute(path: '/actions',      builder: (context, state) => ActionScreen()),
   ],
 );
@@ -86,17 +91,17 @@ class WelcomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
                 // Logo/icon
-                Icon(
-                  Icons.eco,
-                  size: 64,
-                  color: kPrimary,
+                Image.asset(
+                  'assets/images/leaf_icon.png',
+                  height: 64,
                 ),
                 SizedBox(height: 32),
 
                 // Title
                 Text(
-                  'Net Zero\nPlanner',
+                  'My Net Zero\nPlanner',
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -108,6 +113,274 @@ class WelcomeScreen extends StatelessWidget {
                 // Subtitle
                 Text(
                   'Calculate your household\'s carbon footprint and get a personalised plan to reach net zero.',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: kTextSubtle,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 48),
+
+                // Start button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/info'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimary,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Get Started',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),   // ← closes screenWrapper
+      ),     // ← closes SafeArea
+    );       // ← closes Scaffold
+  }
+}
+
+// ── Info Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+class InfoScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea( //wraps content to avoid physical device intrusion (e.g camera thing)
+        child: SingleChildScrollView(
+          child: screenWrapper( // applies visual stying and layout from what I have defined already
+            child: Padding( // applies padding round the outside so its not all cramped up on the sides
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    height: 60,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Center(
+                          child: Text(
+                            'About This App',
+                            style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          child: Image.asset(
+                            'assets/images/leaf_icon.png',
+                            height: 49,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    'My Net Zero Planner helps you to understand where your carbon emissions are coming from and how to reduce them.',
+                    style: TextStyle(fontSize: 18, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    'The app has three phases:',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 15),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                      children: [
+                        TextSpan(
+                          text: 'Phase 1:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: ' Carbon dioxide emissions calculation'),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'This is to give you an understanding about where your emissions are coming from, and the areas that need the most improvements.',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'You will need previous energy bill information, so have this to hand before you start.',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Try to be as careful as possible as this helps us to give you accurate results and recommendations!',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 30),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                      children: [
+                        TextSpan(
+                          text: 'Phase 2:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: ' About you'),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'This is a quiz designed to understand your habits, house characteristics, and any carbon reduction actions you have already taken to tailor reduction actions to your lifestyle.',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'It is very short and should only take 2-3 minutes.',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 30),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                      children: [
+                        TextSpan(
+                          text: 'Phase 3:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: 'Reduction Actions'),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'This is where you can see steps you can take to reduce your household emissions.',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'There are three tiers: free, cheap and expensive. Within these tiers actions are given to you in order of highest impact.',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Don\'t worry, as if you don\'t like an action you can always skip or remove it!',
+                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 30),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                      children: [
+                        TextSpan(text: 'Climate action '),
+                        TextSpan(
+                          text: 'shouldn\'t force you',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: ' to give up habits, activities or things you love. It should be integrated seamlessly into everyone\'s lives.'),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                      children: [
+                        TextSpan(text: 'My Net Zero Planner aims to do just that by giving you '),
+                        TextSpan(
+                          text: 'easy, impactful',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: ' actions to help make the world a better place for everyone!'),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 30),
+                  // Start button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/phase1'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimary,
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Let\'s go! →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Phase 1 Screen ─────────────────────────────────────────────────────────
+class Phase1Screen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                // Logo/icon
+                Image.asset(
+                  'assets/images/leaf_icon.png',
+                  height: 64,
+                ),
+                SizedBox(height: 32),
+
+                // Title
+                Text(
+                  'Phase 1',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    height: 1.1,
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Subtitle
+                Text(
+                  'Carbon dioxide emissions calculation',
                   style: TextStyle(
                     fontSize: 18,
                     color: kTextSubtle,
@@ -135,20 +408,12 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 16),
-
-                // Time estimate
-                Center(
-                  child: Text(
-                    'Takes about 10 minutes',
-                    style: TextStyle(color: kTextSubtle),
-                  ),
-                ),
               ],
             ),
           ),
-        ),   // ← closes screenWrapper
-      ),     // ← closes SafeArea
-    );       // ← closes Scaffold
+        ),   
+      ),     
+    );       
   }
 }
 
@@ -488,242 +753,244 @@ class _TransportScreenState extends State<TransportScreen> {
     return Scaffold(
       body: SafeArea(
         child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
 
-                SizedBox(height: 0),
+                  SizedBox(height: 0),
 
-                Text(
-                  'Transport',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-
-                progressBar(0.3),
-                SizedBox(height: 24),
-
-                Text(
-                  'CO2 emissions from transport',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 32),
-
-                // Car type dropdown
-                Text('Car type',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _carSize,
-                  selectedItemBuilder: (context) => [
-                    Text('Mini'),
-                    Text('Supermini'),
-                    Text('Lower Medium'),
-                    Text('Upper Medium'),
-                    Text('Executive'),
-                    Text('Luxury'),
-                    Text('Sports'),
-                    Text('Dual Purpose / SUV'),
-                    Text('MPV / People Carrier'),
-                  ],
-                  decoration: InputDecoration(),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'mini',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Mini'),
-                          Text('e.g. Fiat 500, Smart Car', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'supermini',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Supermini'),
-                          Text('e.g. VW Polo, Ford Fiesta', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'lower medium',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Lower Medium'),
-                          Text('e.g. VW Golf, Ford Focus', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'upper medium',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Upper Medium'),
-                          Text('e.g. BMW 3 Series, Audi A4', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'executive',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Executive'),
-                          Text('e.g. BMW 5 Series, Mercedes E-Class', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'luxury',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Luxury'),
-                          Text('e.g. Mercedes S-Class, Bentley', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'sports',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Sports'),
-                          Text('e.g. Porsche 911, Mazda MX-5', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'dual purpose',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('Dual Purpose / SUV'),
-                          Text('e.g. Toyota RAV4, VW Tiguan', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'mpv',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('MPV / People Carrier'),
-                          Text('e.g. Ford Galaxy, VW Sharan', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _carSize = value!),
-                ),
-                SizedBox(height: 24),
-
-                // Fuel type dropdown
-                Text('Fuel type',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _fuelType,
-                  decoration: InputDecoration(),
-                  items: [
-                    DropdownMenuItem(value: 'petrol', child: Text('Petrol')),
-                    DropdownMenuItem(value: 'diesel', child: Text('Diesel')),
-                    DropdownMenuItem(value: 'plug in hybrid', child: Text('Plug In Hybrid')),
-                    DropdownMenuItem(value: 'electric', child: Text('Electric')),
-                  ],
-                  onChanged: (value) => setState(() => _fuelType = value!),
-                ),
-                SizedBox(height: 24),
-
-
-                // Car Mileage
-                Text('Weekly Mileage',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _mileageController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 150',
-                    suffixText: 'miles',
+                  Text(
+                    'Transport',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: 24),
+                  SizedBox(height: 12),
 
-                // Public transport usage
-                Text('Monthly Spending On Buses Or Taxis (£)',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _busController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 20',
-                    suffixText: '£',
+                  progressBar(0.3),
+                  SizedBox(height: 24),
+
+                  Text(
+                    'CO2 emissions from transport',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: 24),
+                  SizedBox(height: 32),
 
-                // Train usage
-                Text('Monthly Spending On Trains (£)',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _trainController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                  decoration: InputDecoration(
-                    hintText: 'e.g. 25',
-                    suffixText: '£',
+                  // Car type dropdown
+                  Text('Car type',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _carSize,
+                    selectedItemBuilder: (context) => [
+                      Text('Mini'),
+                      Text('Supermini'),
+                      Text('Lower Medium'),
+                      Text('Upper Medium'),
+                      Text('Executive'),
+                      Text('Luxury'),
+                      Text('Sports'),
+                      Text('Dual Purpose / SUV'),
+                      Text('MPV / People Carrier'),
+                    ],
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'mini',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Mini'),
+                            Text('e.g. Fiat 500, Smart Car', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'supermini',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Supermini'),
+                            Text('e.g. VW Polo, Ford Fiesta', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'lower medium',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Lower Medium'),
+                            Text('e.g. VW Golf, Ford Focus', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'upper medium',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Upper Medium'),
+                            Text('e.g. BMW 3 Series, Audi A4', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'executive',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Executive'),
+                            Text('e.g. BMW 5 Series, Mercedes E-Class', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'luxury',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Luxury'),
+                            Text('e.g. Mercedes S-Class, Bentley', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'sports',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Sports'),
+                            Text('e.g. Porsche 911, Mazda MX-5', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'dual purpose',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Dual Purpose / SUV'),
+                            Text('e.g. Toyota RAV4, VW Tiguan', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'mpv',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('MPV / People Carrier'),
+                            Text('e.g. Ford Galaxy, VW Sharan', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) => setState(() => _carSize = value!),
                   ),
-                ),
+                  SizedBox(height: 24),
 
-                Spacer(),
+                  // Fuel type dropdown
+                  Text('Fuel type',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _fuelType,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'petrol', child: Text('Petrol')),
+                      DropdownMenuItem(value: 'diesel', child: Text('Diesel')),
+                      DropdownMenuItem(value: 'plug in hybrid', child: Text('Plug In Hybrid')),
+                      DropdownMenuItem(value: 'electric', child: Text('Electric')),
+                    ],
+                    onChanged: (value) => setState(() => _fuelType = value!),
+                  ),
+                  SizedBox(height: 24),
 
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      profile.carFuel = _fuelType;
-                      profile.carSize = _carSize;
-                      profile.weeklyMileage = double.tryParse(_mileageController.text) ?? 0;
-                      profile.monthlyBusSpend = double.tryParse(_busController.text) ?? 0;
-                      profile.monthlyTrainSpend = double.tryParse(_trainController.text) ?? 0;
-                      profile.update();
-                      context.go('/flights');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+                  // Car Mileage
+                  Text('Weekly Mileage',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _mileageController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 150',
+                      suffixText: 'miles',
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 24),
+
+                  // Public transport usage
+                  Text('Monthly Spending On Buses Or Taxis (£)',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _busController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 20',
+                      suffixText: '£',
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Train usage
+                  Text('Monthly Spending On Trains (£)',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _trainController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 25',
+                      suffixText: '£',
+                    ),
+                  ),
+
+                  SizedBox(height: 32),
+
+                  // Next button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.carFuel = _fuelType;
+                        profile.carSize = _carSize;
+                        profile.weeklyMileage = double.tryParse(_mileageController.text) ?? 0;
+                        profile.monthlyBusSpend = double.tryParse(_busController.text) ?? 0;
+                        profile.monthlyTrainSpend = double.tryParse(_trainController.text) ?? 0;
+                        profile.update();
+                        context.go('/flights');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Next →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -960,16 +1227,21 @@ class _FlightsScreenState extends State<FlightsScreen> {
         children: [
 
           // Header with remove button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Stack( //layers children instead of laying them out in sequence like a row
+            alignment: Alignment.center,
             children: [
-              Text('Trip ${index + 1}',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-              IconButton(
-                onPressed: () => _removeTrip(index),
-                icon: Icon(Icons.close, color: kTextSubtle, size: 20),
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
+              Center(
+                child: Text('Trip ${index + 1}',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  onPressed: () => _removeTrip(index),
+                  icon: Icon(Icons.close, color: kTextSubtle, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(),
+                ),
               ),
             ],
           ),
@@ -1024,11 +1296,12 @@ class _FlightsScreenState extends State<FlightsScreen> {
             children: [
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text('Passengers', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                     SizedBox(height: 4),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
                           onPressed: () {
@@ -1054,11 +1327,12 @@ class _FlightsScreenState extends State<FlightsScreen> {
               ),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text('Nights', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                     SizedBox(height: 4),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
                           onPressed: () {
@@ -1137,16 +1411,21 @@ class _FlightsScreenState extends State<FlightsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Text('Stay ${i + 1}',
+                      Center(
+                        child: Text('Stay ${i + 1}',
                           style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-                      IconButton(
-                        onPressed: () => setState(() => _ukStays.removeAt(i)),
-                        icon: Icon(Icons.close, color: kTextSubtle, size: 20),
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          onPressed: () => setState(() => _ukStays.removeAt(i)),
+                          icon: Icon(Icons.close, color: kTextSubtle, size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints()
+                        ),
                       ),
                     ],
                   ),
@@ -1173,10 +1452,11 @@ class _FlightsScreenState extends State<FlightsScreen> {
                     children: [
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text('People', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 IconButton(
                                   onPressed: () {
@@ -1201,11 +1481,12 @@ class _FlightsScreenState extends State<FlightsScreen> {
                         ),
                       ),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Column( //arranges children vertically
+                          crossAxisAlignment: CrossAxisAlignment.center, //controls horizontal alignment
                           children: [
                             Text('Nights', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                            Row(
+                            Row( // default to stretch and fill available width, with default being everything on the left, so need to center whats happening inside this
+                              mainAxisAlignment: MainAxisAlignment.center, //controls vertical alignment
                               children: [
                                 IconButton(
                                   onPressed: () {
@@ -1237,19 +1518,22 @@ class _FlightsScreenState extends State<FlightsScreen> {
           }).toList(),
 
           // Add UK stay button
-          OutlinedButton.icon(
-            onPressed: () {
-              setState(() {
-                _ukStays.add({'people': 1, 'nights': 1, 'type': 'hotel'});
-              });
-            },
-            icon: Icon(Icons.add, color: kPrimary),
-            label: Text('Add UK stay',
-                style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600)),
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              side: BorderSide(color: kPrimary),
-              shape: StadiumBorder(),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _ukStays.add({'people': 1, 'nights': 1, 'type': 'hotel'});
+                });
+              },
+              icon: Icon(Icons.add, color: kPrimary),
+              label: Text('Add UK stay',
+                  style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600)),
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 14),
+                side: BorderSide(color: kPrimary),
+                shape: StadiumBorder(),
+              ),
             ),
           ),
         ],
@@ -1307,7 +1591,7 @@ class _DietScreenState extends State<DietScreen> {
                 // Red meat days
                 Text('Number of days a week that you eat red meat',
                     style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
+                SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1334,11 +1618,12 @@ class _DietScreenState extends State<DietScreen> {
                     ),
                   ],
                 ),
+                SizedBox(height: 10),
 
                 // White meat days
                 Text('Number of days a week that you eat white meat',
                     style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
+                SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1365,6 +1650,8 @@ class _DietScreenState extends State<DietScreen> {
                     ),
                   ],
                 ),
+
+                SizedBox(height: 10),
 
                 // Shopping spend
                 Text('Weekly shopping spend on non-meat items',
@@ -2015,7 +2302,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () => context.go('/quiz'),
+            onPressed: () => context.go('phase2'),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 18),
               shape: StadiumBorder(),
@@ -2080,6 +2367,77 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 }
 
+// ── Phase 2 Screen ─────────────────────────────────────────────────────────
+class Phase2Screen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                // Logo/icon
+                Image.asset(
+                  'assets/images/leaf_icon.png',
+                  height: 64,
+                ),
+                SizedBox(height: 32),
+
+                // Title
+                Text(
+                  'Phase 2',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    height: 1.1,
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Subtitle
+                Text(
+                  'About you and your house',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: kTextSubtle,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 48),
+
+                // Start button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/quiz'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimary,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Get Started',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),   
+      ),     
+    );       
+  }
+}
+
 // ── Quiz Screen ─────────────────────────────────────────────────────────
 class QuizScreen extends StatelessWidget {
   @override
@@ -2093,17 +2451,17 @@ class QuizScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+
                 // Logo/icon
-                Icon(
-                  Icons.eco,
-                  size: 64,
-                  color: kPrimary,
+                Image.asset(
+                  'assets/images/leaf_icon.png',
+                  height: 64,
                 ),
                 SizedBox(height: 32),
 
                 // Title
                 Text(
-                  'Carbon Reduction Quiz',
+                  'About You',
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -2142,14 +2500,6 @@ class QuizScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 16),
-
-                // Time estimate
-                Center(
-                  child: Text(
-                    'Takes about 10 minutes',
-                    style: TextStyle(color: kTextSubtle),
-                  ),
-                ),
               ],
             ),
           ),
@@ -2746,7 +3096,87 @@ class _HabitScreenState extends State<HabitScreen> {
                         profile.washingFrequency = int.tryParse(_washingController.text) ?? 0;
                         profile.washingTemperature = _washingTemp;
                         profile.update();
-                        context.go('/actions');
+                        context.go('/homeowner');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Next →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Homeowner Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+class HomeownerScreen extends StatefulWidget {
+  @override
+  _HomeownerScreenState createState() => _HomeownerScreenState();
+}
+
+class _HomeownerScreenState extends State<HomeownerScreen> {
+  String _homeowner = 'homeowner';
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+
+                  SizedBox(height: 0),
+
+                  Text(
+                    'Final Question',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 12),
+
+                  progressBar(0.2),
+                  SizedBox(height: 24),
+
+                  // Fuel type dropdown
+                  Text('Are you a...',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _homeowner,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'homeowner', child: Text('Home Owner?')),
+                      DropdownMenuItem(value: 'renter', child: Text('Renter?')),
+                    ],
+                    onChanged: (value) => setState(() => _homeowner = value!),
+                  ),
+
+                  SizedBox(height: 32),
+
+                  // Next button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.homeowner = _homeowner;
+                        context.go('/phase3');
                       },
                       style: ElevatedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: 18),
@@ -2768,6 +3198,77 @@ class _HabitScreenState extends State<HabitScreen> {
   }
 }
 
+// ── Phase 3 Screen ─────────────────────────────────────────────────────────
+class Phase3Screen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                // Logo/icon
+                Image.asset(
+                  'assets/images/leaf_icon.png',
+                  height: 64,
+                ),
+                SizedBox(height: 32),
+
+                // Title
+                Text(
+                  'Phase 3',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    height: 1.1,
+                  ),
+                ),
+                SizedBox(height: 16),
+
+                // Subtitle
+                Text(
+                  'Reduction Actions',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: kTextSubtle,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 48),
+
+                // Start button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/actions'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimary,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Get Started',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),   
+      ),     
+    );       
+  }
+}
+
 // ── Actions / Recommendations Screen ───────────────────────────────────────────
 class ActionScreen extends StatefulWidget { //create a state where this screen can always live
   @override
@@ -2781,6 +3282,7 @@ class _ActionScreenState extends State<ActionScreen> {
   String? _error; //either there is no error so this value is null (?) or there is an error. At the start there is no error so this is null, but if something happens i could give the error a value
   Map<String, dynamic>? _actions; //at the beginning I haven't called anything from the backend so actions is null. Later, I will call something so it won't be null anymore. Also there is no map so the map fuction is null.
   List<Map<String, dynamic>> _queue = [];
+  List<String> _skippedNames = [];
 
   @override
   void initState() { //initState() is darts standard screen builder. I am saying void this and have my code there in place
@@ -2805,7 +3307,9 @@ class _ActionScreenState extends State<ActionScreen> {
           _actions = jsonDecode(response.body); // if it works, change actions to match the response
           _loading = false;
           _queue = List<Map<String, dynamic>>.from(_actions!['recommendations']);
-          
+          for (final name in _skippedNames) {
+            _moveToBackOfTier(name);
+          }
         });
       } 
       else {
@@ -2873,18 +3377,12 @@ class _ActionScreenState extends State<ActionScreen> {
 
   void _skip() {
     if (_queue.length <= 1) return;
+    final name = _queue.first['name'] as String;
     setState(() {
-      final skipped = _queue.removeAt(0);
-      final skippedCost = skipped['cost'];
-
-      int insertIndex = _queue.length;
-      for (int i = 0; i < _queue.length; i++) {
-        if (_queue[i]['cost'] != skippedCost) {
-          insertIndex = i;
-          break;
-        }
+      if (!_skippedNames.contains(name)) {
+        _skippedNames.add(name);
       }
-      _queue.insert(insertIndex, skipped);
+      _moveToBackOfTier(name);
     });
   }
 
@@ -3002,20 +3500,6 @@ class _ActionScreenState extends State<ActionScreen> {
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _dismiss,
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: kBorder),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Don\'t Show This Again',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: kTextSubtle),
-                      ),
-                    ),
-                  ),
                   SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
@@ -3032,6 +3516,16 @@ class _ActionScreenState extends State<ActionScreen> {
                     ),
                   ),
                 ],
+              ),
+              SizedBox(height: 12),
+              Center(
+                child: TextButton(
+                  onPressed: _dismiss,
+                  child: Text(
+                    'Not interested — don\'t show this again',
+                    style: TextStyle(color: kTextSubtle, fontSize: 13),
+                  ),
+                ),
               ),
             ],
           ),
@@ -3098,6 +3592,21 @@ class _ActionScreenState extends State<ActionScreen> {
     );
   }
 
+  void _moveToBackOfTier(String name) {
+    final index = _queue.indexWhere((a) => a['name'] == name); // finding the number of each specific item in the queue
+    if (index == -1) return; // not in the current queue (e.g. already completed/dismissed) - nothing to do
+    final item = _queue.removeAt(index);
+    final cost = item['cost'];
+    int insertIndex = _queue.length;
+    for (int i = 0; i < _queue.length; i++) {
+      if (_queue[i]['cost'] != cost) { // if the items cost is different from the one that got removed
+        insertIndex = i; //remember the position
+        break; // stop looping
+      }
+    }
+    _queue.insert(insertIndex, item); // insert the removed item in that position
+  }
+
 
   Future<void> _markDone() async { // no question mark as it always produces a future
     final profile = Provider.of<ProfileStore>(context, listen: false);
@@ -3107,3 +3616,5 @@ class _ActionScreenState extends State<ActionScreen> {
     await _getActions();
   }
 }
+
+// ---- Practice Screen -----------------------------
