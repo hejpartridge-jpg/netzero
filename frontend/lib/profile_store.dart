@@ -7,12 +7,13 @@ class ProfileStore extends ChangeNotifier {
   String postcode = '';
 
   // ── Energy ─────────────────────────────────────────────
-  double annualGasKwh = 0;
+  double monthlyGasSpend = 0;
   String fuelType = 'natural_gas';
-  double annualElectricityKwh = 0;
-  double annualSolarKwh = 0;
+  double monthlyElecSpend = 0;
+  double monthlySolarKwh = 0;
   String tariff = 'PPA';
-  double annualWaterM3 = 0;
+  double monthlyWaterSpend = 0;
+  int billingMonth = DateTime.now().month == 1 ? 12 : DateTime.now().month - 1;
 
   // ── Transport ──────────────────────────────────────────
   double weeklyMileage = 0;
@@ -86,7 +87,7 @@ class ProfileStore extends ChangeNotifier {
   String washingTemperature = '40';
 
   // ── Habit Questions ──────────────────────────────────────────────────────────
-  String homeowner = 'homeowner'
+  String homeowner = 'homeowner';
 
   // ── Action Tracking ─────────────────────────────────────────────────────────
   List<String> completedActions = [];
@@ -96,12 +97,13 @@ class ProfileStore extends ChangeNotifier {
   Map<String, dynamic> toProfile() {
     return {
       'num_people':               numPeople,
-      'annual_gas_kwh':           annualGasKwh,
+      'monthly_gas_spend':        monthlyGasSpend,
       'fuel_type':                fuelType,
-      'annual_electricity_kwh':   annualElectricityKwh,
+      'monthly_elec_spend':       monthlyElecSpend,
+      'billing_month':            billingMonth,
       'tariff':                   tariff,
-      'solar_self_consumed_kwh':  annualSolarKwh,
-      'annual_water_m3':          annualWaterM3,
+      'monthly_solar':            monthlySolarKwh,
+      'monthly_water_spend':      monthlyWaterSpend,
       'weekly_mileage':           weeklyMileage,
       'car_fuel':                 carFuel,
       'car_size':                 carSize,

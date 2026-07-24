@@ -53,6 +53,21 @@ ELECTRICITY_TARIFF_FACTORS = {
     "PPA": 0.01718,
 }
 
+ELECTRICITY_MONTHLY_FACTORS = {
+    1:   0.1003,
+    2:   0.08651,
+    3:   0.08997,
+    4:   0.07958,
+    5:   0.07612,
+    6:   0.07612,
+    7:   0.07612,
+    8:   0.07266,
+    9:   0.07612,
+    10:  0.08304,
+    11:  0.08997,
+    12:  0.09343,
+}
+
 SOLAR_FACTOR = 0.045  # kg CO2e per kWh, self-consumed solar
 
 SOLAR_SYSTEM_SIZE_KW = {
@@ -66,10 +81,40 @@ SOLAR_SYSTEM_SIZE_KW = {
 SOLAR_YEARLY_SUNLIGHT_HOURS = 1600 #average, V2 will be more specific
 SOLAR_SELF_CONSUMPTION_RATE = 0.5
 
+SOLAR_MONTHLY_FACTORS = {
+    1:   0.03842,
+    2:   0.05704,
+    3:   0.09546,
+    4:   0.1281,
+    5:   0.1385,
+    6:   0.1362,
+    7:   0.1222,
+    8:   0.1013,
+    9:   0.07101,
+    10:  0.04657,
+    11:  0.03376,
+    12:  0.03143,
+}
+
 # ── GAS ────────────────────────────────────────────────────────────────────
 GAS_FACTORS = {
     "lpg":         _get("Annual Gas usage (gross)", "LPG"),
     "natural_gas": _get("Annual Gas usage (gross)", "Natural Gas"),
+}
+
+GAS_MONTHLY_FACTORS = {
+    1:   0.1852,
+    2:   0.1392,
+    3:   0.1198,
+    4:   0.07561,
+    5:   0.03528,
+    6:   0.02429,
+    7:   0.01861,
+    8:   0.02118,
+    9:   0.03759,
+    10:  0.07404,
+    11:  0.12,
+    12:  0.1491,
 }
 
 BOILER_AGE = {

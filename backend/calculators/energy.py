@@ -20,7 +20,6 @@ def calculate_gas_emissions(annual_kwh: float, fuel_type: str) -> float:
         factor = GAS_FACTORS.get(fuel_type)    
         if factor is None:
             raise ValueError(f"Unknown fuel type: '{fuel_type}'. Must be 'natural_gas' or 'lpg'")
-    
         return annual_kwh * factor
 
 

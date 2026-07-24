@@ -586,12 +586,6 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Find these figures on your energy bills.',
-                    style: TextStyle(color: kTextSubtle),
-                    textAlign: TextAlign.center,
-                  ),
                   SizedBox(height: 32),
 
                   // Fuel type dropdown
@@ -611,7 +605,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   SizedBox(height: 24),
 
                   // Gas usage
-                  Text('Annual gas usage (kWh)',
+                  Text('What did you spend last month on gas?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
                   TextField(
@@ -619,28 +613,23 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      hintText: 'e.g. 12000',
-                      suffixText: 'kWh',
+                      prefixText: '£',
+                      hintText: 'e.g. 75',
                     ),
                   ),
                   SizedBox(height: 24),
 
                   // Electricity usage
-                  Text('Annual electricity usage (kWh)',
+                  Text('What did you spend last month on electricity?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
-                  Text(
-                    'Energy you buy from the grid, plus any additional energy you consume from solar panels.',
-                    style: TextStyle(color: kTextSubtle),
-                    textAlign: TextAlign.center,
-                  ),
                   TextField(
                     controller: _electricityController,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      hintText: 'e.g. 3100',
-                      suffixText: 'kWh',
+                      prefixText: '£',
+                      hintText: 'e.g. 70',
                     ),
                   ),
                   SizedBox(height: 24),
@@ -661,7 +650,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   SizedBox(height: 24),
 
                   // Solar usage
-                  Text('Annual electricity you consume from any solar panels (kWh)',
+                  Text('How much electricity did you use last month from your solar panels?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText),
                       textAlign: TextAlign.center),
                   SizedBox(height: 8),
@@ -676,14 +665,14 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      hintText: 'e.g. 2000',
+                      hintText: 'e.g. 100',
                       suffixText: 'kWh',
                     ),
                   ),
                   SizedBox(height: 24),
 
                   // Water usage
-                  Text('Annual water usage (m³)',
+                  Text('How much did you spend last month on your water bill?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
                   TextField(
@@ -691,8 +680,8 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      hintText: 'e.g. 100',
-                      suffixText: 'm³',
+                      prefixText: '£',
+                      hintText: 'e.g. 30',
                     ),
                   ),
 
@@ -705,10 +694,10 @@ class _EnergyScreenState extends State<EnergyScreen> {
                       onPressed: () {
                         profile.fuelType = _fuelType;
                         profile.tariff = _tariff;
-                        profile.annualGasKwh = double.tryParse(_gasController.text) ?? 0;
-                        profile.annualElectricityKwh = double.tryParse(_electricityController.text) ?? 0;
-                        profile.annualSolarKwh = double.tryParse(_solarController.text) ?? 0;
-                        profile.annualWaterM3 = double.tryParse(_waterController.text) ?? 0;
+                        profile.monthlyGasSpend = double.tryParse(_gasController.text) ?? 0;
+                        profile.monthlyElecSpend = double.tryParse(_electricityController.text) ?? 0;
+                        profile.monthlySolarKwh = double.tryParse(_solarController.text) ?? 0;
+                        profile.monthlyWaterSpend = double.tryParse(_waterController.text) ?? 0;
                         profile.update();
                         context.go('/transport');
                       },
@@ -2423,7 +2412,7 @@ class Phase2Screen extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      'Get Started',
+                      'Ready?',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -2542,7 +2531,7 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 12),
-                  progressBar(0.25),
+                  progressBar(0.0),
                   SizedBox(height: 24),
 
                   Text(
@@ -2669,7 +2658,7 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 12),
-                  progressBar(0.5),
+                  progressBar(0.25),
                   SizedBox(height: 24),
 
                   Text(
@@ -2869,7 +2858,7 @@ class _InsulationScreenState extends State<InsulationScreen> {
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 12),
-                  progressBar(0.75),
+                  progressBar(0.5),
                   SizedBox(height: 24),
 
                   Text(
@@ -3017,7 +3006,7 @@ class _HabitScreenState extends State<HabitScreen> {
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 12),
-                  progressBar(1.0),
+                  progressBar(0.75),
                   SizedBox(height: 24),
 
                   Text(
@@ -3151,7 +3140,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
                   ),
                   SizedBox(height: 12),
 
-                  progressBar(0.2),
+                  progressBar(1.0),
                   SizedBox(height: 24),
 
                   // Fuel type dropdown

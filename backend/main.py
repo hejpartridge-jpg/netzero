@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from calculator import calculate_total_emissions
 from recommendations import get_recommendations
+from reductions.initial_state import build_initial_state
 
 app = FastAPI()
 
@@ -17,7 +18,8 @@ app.add_middleware(
 
 @app.post("/calculate")
 def calculate(profile: dict) -> dict:
-    return calculate_total_emissions(profile)
+    global_state, adjusted_state, co2_state = build_initial_state(profile)
+    return calculate_total_emissions(global_state)
 
 @app.post("/recommendations")
 def recommendations(payload: dict) -> dict:
