@@ -56,7 +56,6 @@ ACTIONS = [
         "label": "Turn your thermostat down by 1 degree",
         "co2_fn": one_degree_less_co2,
         "cost": "free",
-        "price": "£0"
         "difficulty": "easy",
         "eligible": lambda p: True,
     },
@@ -65,7 +64,6 @@ ACTIONS = [
         "label": "Take 2 minutes less in the shower",
         "co2_fn": shorter_shower_co2,
         "cost": "free",
-        "price": "£0"
         "difficulty": "easy",
         "eligible": lambda p: True,
     },
