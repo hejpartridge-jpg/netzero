@@ -38,6 +38,25 @@ from calculators.consumption import (
     calculate_services_emissions,
 )
 
+def calculate_total_annual_cost(profile: dict) -> float:
+    annual_gas_kwh = profile.get("annual_gas_kwh", 0)
+    annual_electricity_kwh = profile.get("annual_electricity_kwh", 0)
+    solar_self_consumed_kwh = profile.get("solar_self_consumed_kwh", 0)
+    annual_water_m3 = profile.get("annual_water_m3", 0)
+
+    gas_cost = annual_gas_kwh * 0.0733
+    grid_electricity_kwh = max(0, annual_electricity_kwh - solar_self_consumed_kwh)
+    electricity_cost = grid_electricity_kwh * 0.2611
+    water_cost = annual_water_m3 * 4.21
+
+    return gas_cost + electricity_cost + water_cost
+
+def calculate_annual_car_cost(profile: dict) -> float:
+    weekly_mileage = profile.get("weekly_mileage", 0)
+    car_fuel = profile.get("car_fuel")
+    cost_per_mile = CAR_COST_PER_MILE.get(car_fuel, 0)
+    return weekly_mileage * 52 * cost_per_mile
+
 # Essentially what I put in the terminal
 # It is now in a way where it takes user inputs from flutter, stores them in a dictionary, and now pastes those dictionary inputs in here!
 def calculate_total_emissions(profile: dict) -> dict:

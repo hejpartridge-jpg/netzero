@@ -274,6 +274,12 @@ FLIGHT_FACTORS = {
     }
 }
 
+CAR_COST_PER_MILE = {
+    "petrol":         0.1972,
+    "diesel":         0.1831,
+    "plug in hybrid": 0.1204,
+    "electric":       0.0553,
+}
 
 # ── ACCOMMODATION ABROAD ─────────────────────────────────────────────────────
 _CSV_PATH2 = os.path.join(os.path.dirname(__file__), "Overnight_hotel_stays_-_Sheet1.csv")

@@ -159,7 +159,7 @@ class InfoScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/welcome'),
         ),
       ),
       body: SafeArea( //wraps content to avoid physical device intrusion (e.g camera thing)
@@ -364,7 +364,7 @@ class Phase1Screen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/info'),
         ),
       ),
       body: SafeArea(
@@ -463,7 +463,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/phase1'),
         ),
       ),
       body: SafeArea(
@@ -772,7 +772,7 @@ class _TransportScreenState extends State<TransportScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/energy'),
         ),
       ),
       body: SafeArea(
@@ -1057,7 +1057,7 @@ class _FlightsScreenState extends State<FlightsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/transport'),
         ),
       ),
       body: SafeArea(
@@ -1596,7 +1596,7 @@ class _DietScreenState extends State<DietScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/flights'),
         ),
       ),
       body: SafeArea(
@@ -1806,7 +1806,7 @@ class _PetsScreenState extends State<PetsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/diet'),
         ),
       ),
       body: SafeArea(
@@ -2037,7 +2037,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/pets'),
         ),
       ),
       body: SafeArea(
@@ -2209,7 +2209,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/spending'),
         ),
       ),
 
@@ -2353,7 +2353,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/household'),
         ),
       ),
       body: SafeArea(
@@ -2550,7 +2550,7 @@ class Phase2Screen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/results'),
         ),
       ),
       body: SafeArea(
@@ -2624,6 +2624,14 @@ class QuizScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/phase2'),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -2712,7 +2720,7 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/quiz'),
         ),
       ),
       body: SafeArea(
@@ -2837,7 +2845,7 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/energyaction'),
         ),
       ),
       body: SafeArea(
@@ -3055,7 +3063,7 @@ class _InsulationScreenState extends State<InsulationScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/homeinfo'),
         ),
       ),
       body: SafeArea(
@@ -3211,7 +3219,7 @@ class _HabitScreenState extends State<HabitScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/insulation'),
         ),
       ),
       body: SafeArea(
@@ -3350,7 +3358,7 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/habit'),
         ),
       ),
       body: SafeArea(
@@ -3428,7 +3436,7 @@ class Phase3Screen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/homeowner'),
         ),
       ),
       body: SafeArea(
@@ -3565,7 +3573,7 @@ class _ActionScreenState extends State<ActionScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/phase3'),
         ),
       ),
       body: SafeArea(
@@ -3648,6 +3656,8 @@ class _ActionScreenState extends State<ActionScreen> {
     final card = _queue.first;
     final label = card['label'] as String;
     final cost = card['cost'] as String;
+    final savings = (card['savings'] as num).toDouble();
+    final savingsNote = card['savings_note'] as String?;
     final difficulty = card['difficulty'] as String;
     final reduction = (card['reduction_kg_co2e'] as num).toDouble();
 
@@ -3715,10 +3725,10 @@ class _ActionScreenState extends State<ActionScreen> {
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 12),
-              Text(
-                'Cost: $cost   •   Difficulty: $difficulty',
-                style: TextStyle(fontSize: 13, color: kTextSubtle),
-              ),
+                Text(
+                  savingsNote ?? 'Saves you £${savings.toStringAsFixed(2)}/year  •   Difficulty: $difficulty',
+                  style: TextStyle(fontSize: 13, color: kTextSubtle),
+                ),
               SizedBox(height: 20),
               Row(
                 children: [

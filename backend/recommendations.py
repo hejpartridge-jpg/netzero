@@ -1,4 +1,5 @@
 from reductions.initial_state import build_initial_state
+from calculator import calculate_total_emissions, calculate_total_annual_cost, calculate_annual_car_cost
 from reductions.reduction_calculations import (
     renewable_tariff_co2,
     solar_panels_co2,
@@ -46,6 +47,7 @@ ACTIONS = [
         "label": "Switch to a renewable (PPA) tariff",
         "co2_fn": renewable_tariff_co2,
         "cost": "free",
+        "savings_note": "Reduces your emissions, and the overall grid emissions!",
         "difficulty": "easy",
         "eligible": lambda p: p.get("tariff") != "PPA",
     },
@@ -54,6 +56,7 @@ ACTIONS = [
         "label": "Turn your thermostat down by 1 degree",
         "co2_fn": one_degree_less_co2,
         "cost": "free",
+        "price": "£0"
         "difficulty": "easy",
         "eligible": lambda p: True,
     },
@@ -62,6 +65,7 @@ ACTIONS = [
         "label": "Take 2 minutes less in the shower",
         "co2_fn": shorter_shower_co2,
         "cost": "free",
+        "price": "£0"
         "difficulty": "easy",
         "eligible": lambda p: True,
     },
@@ -87,6 +91,7 @@ ACTIONS = [
         "co2_fn": economy_not_business_co2,
         "cost": "free",
         "difficulty": "easy",
+        "savings_note": "Saves you roughly 80% of the ticket price",
         "eligible": lambda p: any(
             trip.get("seat") in ("business", "first") for trip in p.get("flights", [])
         ),
@@ -105,6 +110,7 @@ ACTIONS = [
         "co2_fn": upcycle_co2,
         "cost": "free",
         "difficulty": "medium",
+        "savings_note": "Reduces the waste that ends up in landfill",
         "eligible": lambda p: p.get("waste_action") != "upcycle",
     },
     {
@@ -336,15 +342,28 @@ def get_recommendations(profile: dict, completed_actions: list = None, dismissed
             continue
 
         try:
-            _, _, reduction, _ = action["co2_fn"](global_state, adjusted_state, co2_state, profile)
+            _, new_adjusted, reduction, _ = action["co2_fn"](global_state, adjusted_state, co2_state, profile)
         except Exception as e:
             print(f"Recommendation '{action['name']}' failed to calculate: {e}")
+            continue
+
+        cost_before = calculate_total_annual_cost(adjusted_state)
+        cost_after = calculate_total_annual_cost(new_adjusted)
+        
+        car_cost_before = calculate_annual_car_cost(adjusted_state)
+        car_cost_after = calculate_annual_car_cost(new_adjusted)
+        
+        annual_savings = cost_before - cost_after
+
+        if round(reduction, 1) == 0:
             continue
 
         results.append({
             "name": action["name"],
             "label": action["label"],
             "cost": action["cost"],
+            "savings": round(annual_savings, 2),
+            "savings_note": action.get("savings_note"),
             "difficulty": action["difficulty"],
             "reduction_kg_co2e": round(reduction, 1),
         })
