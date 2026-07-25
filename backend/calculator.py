@@ -1,4 +1,5 @@
 # backend/calculator.py
+from emission_factors import ELECTRICITY_FACTOR, GAS_FACTOR, WATER_FACTOR, CAR_COST_PER_MILE
 
 from calculators.energy import (
     calculate_gas_emissions,
