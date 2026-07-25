@@ -154,6 +154,14 @@ class InfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea( //wraps content to avoid physical device intrusion (e.g camera thing)
         child: SingleChildScrollView(
           child: screenWrapper( // applies visual stying and layout from what I have defined already
@@ -351,6 +359,14 @@ class Phase1Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -434,14 +450,22 @@ class _EnergyScreenState extends State<EnergyScreen> {
   bool _hasSolar = false;
   String _fuelType = 'natural_gas';
   String _hobType = 'gas';
-  bool _combinedBilling = false;
-  String _tariff = 'PPA';
+  bool? _combinedBilling;
+  String _tariff = 'standard';
 
   @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: SingleChildScrollView(
@@ -580,6 +604,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   SizedBox(height: 8),
                   DropdownButtonFormField<bool>(
                     value: _combinedBilling,
+                    hint: Text('Select an option'),
                     decoration: InputDecoration(),
                     items: [
                       DropdownMenuItem(value: false, child: Text('Separate bills')),
@@ -589,7 +614,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   ),
                   SizedBox(height: 24),
 
-                  if (_combinedBilling) ...[
+                  if (_combinedBilling == true) ...[
                     Text('What did you spend last month on your combined gas & electricity bill?',
                         style: TextStyle(fontWeight: FontWeight.w600, color: kText),
                         textAlign: TextAlign.center),
@@ -599,12 +624,11 @@ class _EnergyScreenState extends State<EnergyScreen> {
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                       decoration: InputDecoration(
-                        prefixText: 'e.g £',
-                        hintText: '145',
+                        hintText: 'e.g £145',
                       ),
                     ),
                     SizedBox(height: 24),
-                  ] else ...[
+                  ] else if (_combinedBilling == false) ...[
                     Text('What did you spend last month on gas?',
                         style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                     SizedBox(height: 8),
@@ -613,8 +637,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                       decoration: InputDecoration(
-                        prefixText: 'e.g £',
-                        hintText: '75',
+                        hintText: 'e.g £75',
                       ),
                     ),
                     SizedBox(height: 24),
@@ -627,8 +650,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                       decoration: InputDecoration(
-                        prefixText: 'e.g £',
-                        hintText: '70',
+                        hintText: 'e.g £70',
                       ),
                     ),
                     SizedBox(height: 24),
@@ -643,8 +665,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      prefixText: 'e.g £',
-                      hintText: '30',
+                      hintText: 'e.g £30',
                     ),
                   ),
                   SizedBox(height: 24),
@@ -698,10 +719,10 @@ class _EnergyScreenState extends State<EnergyScreen> {
                         profile.monthlySolarKwh = _hasSolar ? (double.tryParse(_solarController.text) ?? 0) : 0;
                         profile.fuelType = _fuelType;
                         profile.hobType = _hobType;
-                        profile.combinedBilling = _combinedBilling;
-                        profile.monthlyCombinedSpend = _combinedBilling ? (double.tryParse(_combinedController.text) ?? 0) : 0;
-                        profile.monthlyGasSpend = _combinedBilling ? 0 : (double.tryParse(_gasController.text) ?? 0);
-                        profile.monthlyElecSpend = _combinedBilling ? 0 : (double.tryParse(_electricityController.text) ?? 0);
+                        profile.combinedBilling = _combinedBilling?? false;
+                        profile.monthlyCombinedSpend = (_combinedBilling ?? false) ? (double.tryParse(_combinedController.text) ?? 0) : 0;
+                        profile.monthlyGasSpend = (_combinedBilling ?? false) ? 0 : (double.tryParse(_gasController.text) ?? 0);
+                        profile.monthlyElecSpend = (_combinedBilling ?? false) ? 0 : (double.tryParse(_electricityController.text) ?? 0);
                         profile.monthlyWaterSpend = double.tryParse(_waterController.text) ?? 0;
                         profile.tariff = _tariff;
                         profile.update();
@@ -746,6 +767,14 @@ class _TransportScreenState extends State<TransportScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: SingleChildScrollView(
@@ -781,15 +810,15 @@ class _TransportScreenState extends State<TransportScreen> {
                   DropdownButtonFormField<String>(
                     value: _carSize,
                     selectedItemBuilder: (context) => [
-                      Text('Mini'),
-                      Text('Supermini'),
-                      Text('Lower Medium'),
-                      Text('Upper Medium'),
-                      Text('Executive'),
-                      Text('Luxury'),
-                      Text('Sports'),
-                      Text('Dual Purpose / SUV'),
-                      Text('MPV / People Carrier'),
+                      Text('Very Small Car'),
+                      Text('Small Car'),
+                      Text('Medium Sized Car'),
+                      Text('Large Car'),
+                      Text('Premium Car'),
+                      Text('Luxury Car'),
+                      Text('Sports Car'),
+                      Text('SUV/ 4x4'),
+                      Text('People Carrier'),
                     ],
                     decoration: InputDecoration(),
                     items: [
@@ -799,7 +828,7 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Mini'),
+                            Text('Very Small Car'),
                             Text('e.g. Fiat 500, Smart Car', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
@@ -810,7 +839,7 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Supermini'),
+                            Text('Small Car'),
                             Text('e.g. VW Polo, Ford Fiesta', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
@@ -821,7 +850,7 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Lower Medium'),
+                            Text('Medium Sized Car'),
                             Text('e.g. VW Golf, Ford Focus', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
@@ -832,8 +861,8 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Upper Medium'),
-                            Text('e.g. BMW 3 Series, Audi A4', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                            Text('Large Car'),
+                            Text('e.g. BMW 3 Series, Audi A4 - 5 seaters, but spacious', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
                       ),
@@ -843,7 +872,7 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Executive'),
+                            Text('Premium Car'),
                             Text('e.g. BMW 5 Series, Mercedes E-Class', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
@@ -854,8 +883,8 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Luxury'),
-                            Text('e.g. Mercedes S-Class, Bentley', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                            Text('Luxury Car'),
+                            Text('e.g. Mercedes S-Class, Bentley - fancy cars you don\'t often see!', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
                       ),
@@ -865,7 +894,7 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Sports'),
+                            Text('Sports Car'),
                             Text('e.g. Porsche 911, Mazda MX-5', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
@@ -876,7 +905,7 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Dual Purpose / SUV'),
+                            Text('SUV/ 4x4'),
                             Text('e.g. Toyota RAV4, VW Tiguan', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
@@ -887,8 +916,8 @@ class _TransportScreenState extends State<TransportScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('MPV / People Carrier'),
-                            Text('e.g. Ford Galaxy, VW Sharan', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                            Text('People Carrier'),
+                            Text('e.g. Ford Galaxy, VW Sharan - boxier cars designed for 7+ people', style: TextStyle(fontSize: 12, color: kTextSubtle)),
                           ],
                         ),
                       ),
@@ -898,7 +927,7 @@ class _TransportScreenState extends State<TransportScreen> {
                   SizedBox(height: 24),
 
                   // Fuel type dropdown
-                  Text('Fuel type',
+                  Text('What fuel does your car use?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -916,7 +945,7 @@ class _TransportScreenState extends State<TransportScreen> {
 
 
                   // Car Mileage
-                  Text('Weekly Mileage',
+                  Text('What\'s your weekly mileage?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
                   TextField(
@@ -939,8 +968,7 @@ class _TransportScreenState extends State<TransportScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      hintText: 'e.g. 20',
-                      suffixText: '£',
+                      hintText: 'e.g. £20',
                     ),
                   ),
                   SizedBox(height: 24),
@@ -954,8 +982,7 @@ class _TransportScreenState extends State<TransportScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      hintText: 'e.g. 25',
-                      suffixText: '£',
+                      hintText: 'e.g. £25',
                     ),
                   ),
 
@@ -1025,6 +1052,14 @@ class _FlightsScreenState extends State<FlightsScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -1556,6 +1591,14 @@ class _DietScreenState extends State<DietScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -1671,8 +1714,8 @@ class _DietScreenState extends State<DietScreen> {
                   value: _foodWaste,
                   decoration: InputDecoration(),
                   items: [
-                    DropdownMenuItem(value: 'bin', child: Text('Normal bin')),
-                    DropdownMenuItem(value: 'compost', child: Text('Compost/Food waste bin')),
+                    DropdownMenuItem(value: 'bin', child: Text('Put it in the normal bin')),
+                    DropdownMenuItem(value: 'compost', child: Text('Compost it/Food waste bin')),
                   ],
                   onChanged: (value) => setState(() => _foodWaste = value!),
                 ),
@@ -1687,7 +1730,7 @@ class _DietScreenState extends State<DietScreen> {
                   decoration: InputDecoration(),
                   items: [
                     DropdownMenuItem(value: 'recycle', child: Text('Recycle')),
-                    DropdownMenuItem(value: 'non_recycle', child: Text('Normal bin')),
+                    DropdownMenuItem(value: 'non_recycle', child: Text('Put it in the normal bin')),
                     DropdownMenuItem(value: 'upcycle', child: Text('Upcycle')),
                   ],
                   onChanged: (value) => setState(() => _normalWaste = value!),
@@ -1758,6 +1801,14 @@ class _PetsScreenState extends State<PetsScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -1891,7 +1942,7 @@ class _PetsScreenState extends State<PetsScreen> {
           SizedBox(height: 8),
 
           // Food type dropdown
-          Text('Food Type', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+          Text('What food does your pet mostly eat?', style: TextStyle(fontSize: 12, color: kTextSubtle)),
           SizedBox(height: 4),
           DropdownButtonFormField<String>(
             value: pet['food'],
@@ -1905,7 +1956,7 @@ class _PetsScreenState extends State<PetsScreen> {
           SizedBox(height: 8),
 
           // Brand dropdown
-          Text('Brand', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+          Text('What brand of food do you give your pet?', style: TextStyle(fontSize: 12, color: kTextSubtle)),
           SizedBox(height: 4),
           DropdownButtonFormField<String>(
             value: pet['brand'],
@@ -1981,6 +2032,14 @@ class _SpendingScreenState extends State<SpendingScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -2145,6 +2204,14 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
 
       body: SafeArea(
         child: screenWrapper(
@@ -2281,6 +2348,14 @@ class _ResultsScreenState extends State<ResultsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -2470,6 +2545,14 @@ class Phase2Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -2624,6 +2707,14 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: SingleChildScrollView(
@@ -2741,6 +2832,14 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: SingleChildScrollView(
@@ -2803,7 +2902,7 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                     onChanged: (value) => setState(() => _wallType = value!),
                   ),
                   SizedBox(height: 24),
-                  
+
                   Text('How old is your boiler?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
@@ -2811,6 +2910,7 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                     value: _boilerAge,
                     decoration: InputDecoration(),
                     items: [
+                      DropdownMenuItem(value: 'unsure', child: Text('I\'m not sure')),
                       DropdownMenuItem(value: '< 10', child: Text('Less than 10 years')),
                       DropdownMenuItem(value: '10-15', child: Text('10-15 years')),
                       DropdownMenuItem(value: '15-20', child: Text('15-20 years')),
@@ -2862,10 +2962,34 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                   SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: _showerType,
+                    selectedItemBuilder: (context) => [
+                      Text('Power / Mixer Shower'),
+                      Text('Electric Shower'),
+                    ],
                     decoration: InputDecoration(),
                     items: [
-                      DropdownMenuItem(value: 'power_mixer', child: Text('Power / Mixer Shower')),
-                      DropdownMenuItem(value: 'electric_shower', child: Text('Electric Shower')),
+                      DropdownMenuItem(
+                        value: 'power_mixer',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Power / Mixer Shower'),
+                            Text('Uses hot water from your boiler or hot water tank. Attached directly to the wall', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'electric_shower',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Electric Shower'),
+                            Text('Has its own heating unit - usually a box on the wall above the shower', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
                     ],
                     onChanged: (value) => setState(() => _showerType = value!),
                   ),
@@ -2876,7 +3000,6 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        profile.hobType = _hobType;
                         profile.incandescentBulbs = int.tryParse(_incandescentController.text) ?? 0;
                         profile.cflBulbs = int.tryParse(_cflController.text) ?? 0;
                         profile.ledBulbs = int.tryParse(_ledController.text) ?? 0;
@@ -2927,6 +3050,14 @@ class _InsulationScreenState extends State<InsulationScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: SingleChildScrollView(
@@ -3075,6 +3206,14 @@ class _HabitScreenState extends State<HabitScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: SingleChildScrollView(
@@ -3206,6 +3345,14 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
     final profile = Provider.of<ProfileStore>(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: SingleChildScrollView(
@@ -3276,6 +3423,14 @@ class Phase3Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(
@@ -3405,6 +3560,14 @@ class _ActionScreenState extends State<ActionScreen> {
   // creating a specific widget on this screen
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: screenWrapper(
           child: Padding(

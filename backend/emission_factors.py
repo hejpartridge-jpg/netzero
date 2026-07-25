@@ -119,6 +119,7 @@ GAS_MONTHLY_FACTORS = {
 }
 
 BOILER_AGE = {
+    "unsure": 0.825,
     "< 10":   0.92,
     "10-15":  0.825,
     "15-20":  0.8,

@@ -11,7 +11,7 @@ class ProfileStore extends ChangeNotifier {
   String fuelType = 'natural_gas';
   double monthlyElecSpend = 0;
   double monthlySolarKwh = 0;
-  String tariff = 'PPA';
+  String tariff = 'standard';
   double monthlyWaterSpend = 0;
   bool combinedBilling = false;
   double monthlyCombinedSpend = 0;
