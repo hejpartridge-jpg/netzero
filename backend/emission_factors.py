@@ -52,20 +52,20 @@ ELECTRICITY_TARIFF_FACTORS = {
     "standard":  ELECTRICITY_FACTOR,
     "PPA": 0.01718,
 }
-
+## electricity usage weightings for each month (divide by the weighting to get yearly usage)
 ELECTRICITY_MONTHLY_FACTORS = {
-    1:   0.1003,
-    2:   0.08651,
-    3:   0.08997,
-    4:   0.07958,
-    5:   0.07612,
-    6:   0.07612,
-    7:   0.07612,
-    8:   0.07266,
-    9:   0.07612,
-    10:  0.08304,
-    11:  0.08997,
-    12:  0.09343,
+    1:   0.1129,
+    2:   0.09472,
+    3:   0.08252,
+    4:   0.07947,
+    5:   0.07197,
+    6:   0.06802,
+    7:   0.06947,
+    8:   0.06754,
+    9:   0.07290,
+    10:  0.08231,
+    11:  0.09164,
+    12:  0.1066,
 }
 
 SOLAR_FACTOR = 0.045  # kg CO2e per kWh, self-consumed solar
@@ -102,6 +102,7 @@ GAS_FACTORS = {
     "natural_gas": _get("Annual Gas usage (gross)", "Natural Gas"),
 }
 
+## gas usage weightings for each month (divide by the weighting to get yearly usage)
 GAS_MONTHLY_FACTORS = {
     1:   0.1852,
     2:   0.1392,
@@ -124,6 +125,37 @@ BOILER_AGE = {
     "20-25":  0.75,
     "> 25":   0.65
 }
+## splits between electricity and gas bills per month (for combined bills)
+ELECTRICITY_MONTHLY_WEIGHTING = {
+    1:   0.4409,
+    2:   0.4682,
+    3:   0.4711,
+    4:   0.5762,
+    5:   0.7252,
+    6:   0.7837,
+    7:   0.8284,
+    8:   0.8048,
+    9:   0.7150,
+    10:  0.5898,
+    11:  0.4969,
+    12:  0.4803,
+}
+
+GAS_MONTHLY_WEIGHTING = {
+    1:   0.5591,
+    2:   0.5318,
+    3:   0.5289,
+    4:   0.4238,
+    5:   0.2748,
+    6:   0.2163,
+    7:   0.1716,
+    8:   0.1952,
+    9:   0.2850,
+    10:  0.4102,
+    11:  0.5031,
+    12:  0.5197,
+}
+
 
 # ── INSULATION ────────────────────────────────────────────────────────────────────
 INSULATION_CO2_SAVING = {

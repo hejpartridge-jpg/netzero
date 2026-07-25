@@ -393,7 +393,7 @@ class Phase1Screen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => context.go('/household'),
+                    onPressed: () => context.go('/energy'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimary,
                       padding: EdgeInsets.symmetric(vertical: 18),
@@ -417,129 +417,6 @@ class Phase1Screen extends StatelessWidget {
   }
 }
 
-
-// ── Household Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-class HouseholdScreen extends StatefulWidget {
-  @override
-  _HouseholdScreenState createState() => _HouseholdScreenState();
-}
-
-class _HouseholdScreenState extends State<HouseholdScreen> {
-  final _postcodeController = TextEditingController();
-  int _numPeople = 1;
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
-
-    return Scaffold(
-
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-
-                // Progress indicator
-
-                SizedBox(height: 0), //these are empty spaces, put them wherever you want a gap
-                
-                Text(
-                  'Your Household',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-
-                progressBar(0.1),
-                SizedBox(height: 24),
-
-                Text(
-                  'Tell us about your household',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'This helps us personalise your results.',
-                  style: TextStyle(color: kTextSubtle),
-                ),
-                SizedBox(height: 50),
-
-                // Postcode input
-                Text('Postcode',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _postcodeController,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. SW1A 1AA',
-                  ),
-                  textCapitalization: TextCapitalization.characters,
-                ),
-                SizedBox(height: 65),
-
-                // Number of people
-                Text('Number of people in your household',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        if (_numPeople > 1) setState(() => _numPeople--);
-                      },
-                      icon: Icon(Icons.remove_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
-                    ),
-                    Text(
-                      '$_numPeople',
-                      style: TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _numPeople++),
-                      icon: Icon(Icons.add_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
-                    ),
-                  ],
-                ),
-
-                Spacer(),
-
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      profile.postcode = _postcodeController.text;
-                      profile.numPeople = _numPeople;
-                      profile.update();
-                      context.go('/energy');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),   // ← closes screenWrapper
-      ),     // ← closes SafeArea
-    );       // ← closes Scaffold
-  }
-}
-
 // ── Energy Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 class EnergyScreen extends StatefulWidget {
@@ -548,11 +425,16 @@ class EnergyScreen extends StatefulWidget {
 }
 
 class _EnergyScreenState extends State<EnergyScreen> {
+  final _solarController = TextEditingController();
   final _gasController = TextEditingController();
   final _electricityController = TextEditingController();
+  final _combinedController = TextEditingController();
   final _waterController = TextEditingController();
-  final _solarController = TextEditingController();
+
+  bool _hasSolar = false;
   String _fuelType = 'natural_gas';
+  String _hobType = 'gas';
+  bool _combinedBilling = false;
   String _tariff = 'PPA';
 
   @override
@@ -588,90 +470,171 @@ class _EnergyScreenState extends State<EnergyScreen> {
                   ),
                   SizedBox(height: 32),
 
-                  // Fuel type dropdown
+                  // ── 1. Solar panels ──────────────────────────
+                  Text('Do you have solar panels?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<bool>(
+                    value: _hasSolar,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: false, child: Text('No')),
+                      DropdownMenuItem(value: true, child: Text('Yes')),
+                    ],
+                    onChanged: (value) => setState(() => _hasSolar = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  if (_hasSolar) ...[
+                    Text('How much electricity did you use last month from your solar panels?',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                        textAlign: TextAlign.center),
+                    SizedBox(height: 8),
+                    Text(
+                      'Energy you use NOT energy you export.',
+                      style: TextStyle(color: kTextSubtle),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: _solarController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                      decoration: InputDecoration(
+                        hintText: 'e.g. 100',
+                        suffixText: 'kWh',
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                  ],
+
+                  // ── 2. Heating fuel type ──────────────────────
                   Text('Heating fuel type',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: _fuelType,
+                    selectedItemBuilder: (context) => [
+                      Text('Mains gas heating'),
+                      Text('Bottled/Tank gas (LPG)'),
+                      Text('No gas, just a heat pump'),
+                    ],
                     decoration: InputDecoration(),
                     items: [
-                      DropdownMenuItem(value: 'natural_gas', child: Text('Natural Gas')),
-                      DropdownMenuItem(value: 'lpg', child: Text('LPG')),
-                      DropdownMenuItem(value: 'heat_pump', child: Text('No gas, just a heat pump')),
+                      DropdownMenuItem(
+                        value: 'natural_gas',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Mains Gas Heating'),
+                            Text('Connected to the gas grid', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'lpg',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Bottled/Tank Gas (LPG)'),
+                            Text('Common in rural areas not on the gas mains', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'heat_pump',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('No gas, just a heat pump'),
+                          ],
+                        ),
+                      ),
                     ],
                     onChanged: (value) => setState(() => _fuelType = value!),
                   ),
                   SizedBox(height: 24),
 
-                  // Gas usage
-                  Text('What did you spend last month on gas?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _gasController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      prefixText: '£',
-                      hintText: 'e.g. 75',
-                    ),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Electricity usage
-                  Text('What did you spend last month on electricity?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _electricityController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      prefixText: '£',
-                      hintText: 'e.g. 70',
-                    ),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Tariff type dropdown
-                  Text('Tariff type',
+                  // ── Hob type ───────────────────────────────────
+                  Text('What type of hob do you cook with?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: _tariff,
+                    value: _hobType,
                     decoration: InputDecoration(),
                     items: [
-                      DropdownMenuItem(value: 'standard', child: Text('Standard Tariff')),
-                      DropdownMenuItem(value: 'PPA', child: Text('PPA Tariff')),
+                      DropdownMenuItem(value: 'gas', child: Text('Gas')),
+                      DropdownMenuItem(value: 'electric', child: Text('Electric')),
                     ],
-                    onChanged: (value) => setState(() => _tariff = value!),
+                    onChanged: (value) => setState(() => _hobType = value!),
                   ),
                   SizedBox(height: 24),
 
-                  // Solar usage
-                  Text('How much electricity did you use last month from your solar panels?',
+                  // ── 3. Combined billing ───────────────────────
+                  Text('Do you get one combined bill for gas and electricity, or separate bills?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText),
                       textAlign: TextAlign.center),
                   SizedBox(height: 8),
-                  Text(
-                    'Energy you use NOT energy you export.',
-                    style: TextStyle(color: kTextSubtle),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _solarController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      hintText: 'e.g. 100',
-                      suffixText: 'kWh',
-                    ),
+                  DropdownButtonFormField<bool>(
+                    value: _combinedBilling,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: false, child: Text('Separate bills')),
+                      DropdownMenuItem(value: true, child: Text('One combined bill')),
+                    ],
+                    onChanged: (value) => setState(() => _combinedBilling = value!),
                   ),
                   SizedBox(height: 24),
 
-                  // Water usage
+                  if (_combinedBilling) ...[
+                    Text('What did you spend last month on your combined gas & electricity bill?',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: kText),
+                        textAlign: TextAlign.center),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: _combinedController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                      decoration: InputDecoration(
+                        prefixText: 'e.g £',
+                        hintText: '145',
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                  ] else ...[
+                    Text('What did you spend last month on gas?',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: _gasController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                      decoration: InputDecoration(
+                        prefixText: 'e.g £',
+                        hintText: '75',
+                      ),
+                    ),
+                    SizedBox(height: 24),
+
+                    Text('What did you spend last month on electricity?',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: _electricityController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                      decoration: InputDecoration(
+                        prefixText: 'e.g £',
+                        hintText: '70',
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                  ],
+
+                  // ── 4. Water bill ──────────────────────────────
                   Text('How much did you spend last month on your water bill?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
@@ -680,9 +643,48 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                     decoration: InputDecoration(
-                      prefixText: '£',
-                      hintText: 'e.g. 30',
+                      prefixText: 'e.g £',
+                      hintText: '30',
                     ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // ── 5. Tariff type ─────────────────────────────
+                  Text('Tariff type',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _tariff,
+                    selectedItemBuilder: (context) => [
+                      Text('Standard Tariff'),
+                      Text('Green Tariff'),
+                    ],
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'standard',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Standard Tariff'),
+                            Text('Don\'t know? Select this!', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'PPA',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Green Tariff'),
+                            Text('PPA tariffs only (for example with Octopus Energy\'s green tariff)', style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) => setState(() => _tariff = value!),
                   ),
 
                   SizedBox(height: 32),
@@ -692,12 +694,16 @@ class _EnergyScreenState extends State<EnergyScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
+                        profile.solarPanels = _hasSolar;
+                        profile.monthlySolarKwh = _hasSolar ? (double.tryParse(_solarController.text) ?? 0) : 0;
                         profile.fuelType = _fuelType;
-                        profile.tariff = _tariff;
-                        profile.monthlyGasSpend = double.tryParse(_gasController.text) ?? 0;
-                        profile.monthlyElecSpend = double.tryParse(_electricityController.text) ?? 0;
-                        profile.monthlySolarKwh = double.tryParse(_solarController.text) ?? 0;
+                        profile.hobType = _hobType;
+                        profile.combinedBilling = _combinedBilling;
+                        profile.monthlyCombinedSpend = _combinedBilling ? (double.tryParse(_combinedController.text) ?? 0) : 0;
+                        profile.monthlyGasSpend = _combinedBilling ? 0 : (double.tryParse(_gasController.text) ?? 0);
+                        profile.monthlyElecSpend = _combinedBilling ? 0 : (double.tryParse(_electricityController.text) ?? 0);
                         profile.monthlyWaterSpend = double.tryParse(_waterController.text) ?? 0;
+                        profile.tariff = _tariff;
                         profile.update();
                         context.go('/transport');
                       },
@@ -2062,7 +2068,7 @@ class _SpendingScreenState extends State<SpendingScreen> {
                       profile.yearlyMachinery   = double.tryParse(_machineryController.text) ?? 0;
                       profile.yearlyFurniture   = double.tryParse(_furnitureController.text) ?? 0;
                       profile.update();
-                      context.go('/results');
+                      context.go('/household');
                     },
                     style: ElevatedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 18),
@@ -2124,6 +2130,109 @@ class _SpendingScreenState extends State<SpendingScreen> {
     );
   }
 }
+
+// ── Household Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+class HouseholdScreen extends StatefulWidget {
+  @override
+  _HouseholdScreenState createState() => _HouseholdScreenState();
+}
+
+class _HouseholdScreenState extends State<HouseholdScreen> {
+  int _numPeople = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context);
+
+    return Scaffold(
+
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+
+                // Progress indicator
+
+                SizedBox(height: 0), //these are empty spaces, put them wherever you want a gap
+                
+                Text(
+                  'Last Question...',
+                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 12),
+
+                progressBar(0.1),
+                SizedBox(height: 24),
+
+                Text(
+                  'How many people are there in your household?',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 70),
+
+                // Number of people
+                Text('Number of people in your household',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (_numPeople > 1) setState(() => _numPeople--);
+                      },
+                      icon: Icon(Icons.remove_circle_outline),
+                      color: kPrimary,
+                      iconSize: 32,
+                    ),
+                    Text(
+                      '$_numPeople',
+                      style: TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _numPeople++),
+                      icon: Icon(Icons.add_circle_outline),
+                      color: kPrimary,
+                      iconSize: 32,
+                    ),
+                  ],
+                ),
+
+                Spacer(),
+
+                // Next button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      profile.numPeople = _numPeople;
+                      profile.update();
+                      context.go('/results');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text(
+                      'Next →',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),   // ← closes screenWrapper
+      ),     // ← closes SafeArea
+    );       // ← closes Scaffold
+  }
+}
+
 
 // ── Results Screen ────────────────────────────────────────────────────────────
 class ResultsScreen extends StatefulWidget {
@@ -2507,7 +2616,6 @@ class EnergyActionScreen extends StatefulWidget {
 class _EnergyActionScreenState extends State<EnergyActionScreen> {
   bool _smartThermostat = false;
   bool _savingSockets = false;
-  bool _solarPanels = false;
   bool _batteryStorage = false;
   bool _savingShower = false;
 
@@ -2564,14 +2672,6 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
                     contentPadding: EdgeInsets.zero,
                   ),
                   CheckboxListTile(
-                    value: _solarPanels,
-                    onChanged: (value) => setState(() => _solarPanels = value!),
-                    title: Text('Solar panels', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
                     value: _batteryStorage,
                     onChanged: (value) => setState(() => _batteryStorage = value!),
                     title: Text('Battery storage', style: TextStyle(color: kText)),
@@ -2596,7 +2696,6 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
                       onPressed: () {
                         profile.smartThermostat = _smartThermostat;
                         profile.savingSockets = _savingSockets;
-                        profile.solarPanels = _solarPanels;
                         profile.batteryStorage = _batteryStorage;
                         profile.savingShower = _savingShower;
                         profile.update();
@@ -2629,7 +2728,6 @@ class HomeInfoScreen extends StatefulWidget {
 }
 
 class _HomeInfoScreenState extends State<HomeInfoScreen> {
-  String _hobType = 'gas';
   final _incandescentController = TextEditingController(text: '0');
   final _cflController = TextEditingController(text: '0');
   final _ledController = TextEditingController(text: '0');
@@ -2705,21 +2803,7 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
                     onChanged: (value) => setState(() => _wallType = value!),
                   ),
                   SizedBox(height: 24),
-
-                  Text('What type of hob do you cook with?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _hobType,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'gas', child: Text('Gas')),
-                      DropdownMenuItem(value: 'electric', child: Text('Electric')),
-                    ],
-                    onChanged: (value) => setState(() => _hobType = value!),
-                  ),
-                  SizedBox(height: 24),
-
+                  
                   Text('How old is your boiler?',
                       style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
                   SizedBox(height: 8),
