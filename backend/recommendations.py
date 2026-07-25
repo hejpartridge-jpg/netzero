@@ -353,7 +353,7 @@ def get_recommendations(profile: dict, completed_actions: list = None, dismissed
         
         annual_savings = cost_before - cost_after
 
-        if round(reduction, 1) == 0:
+        if round(reduction, 1) <= 0:
             continue
 
         results.append({

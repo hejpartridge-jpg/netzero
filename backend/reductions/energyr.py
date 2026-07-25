@@ -27,6 +27,7 @@ def solar_panels_apply(global_state: dict, adjusted_state: dict, profile: dict) 
     new_adjusted["solar_generated_kwh"] = yearly_production_kwh
     return new_global, new_adjusted
 
+
 # Battery Storage
 def battery_storage_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_global = global_state.copy()
@@ -39,53 +40,56 @@ def battery_storage_apply(global_state: dict, adjusted_state: dict, profile: dic
     new_adjusted["solar_self_consumed_kwh"] = self_consumed_kwh
     return new_global, new_adjusted
 
-#Thermostat 1 degree decrease
+
+# Thermostat 1 degree decrease
 def one_degree_less_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_global = global_state.copy()
     new_adjusted = adjusted_state.copy()
-    
-    if global_state.get("fuel_type") == "heat_pump":
+
+    if profile.get("fuel_type") == "heat_pump":
         old_heating = global_state["heating_electricity_kwh"]
         new_heating = old_heating * 0.87
         reduction = old_heating - new_heating
         new_global["heating_electricity_kwh"] = new_heating
-        new_global["annual_electricity_kwh"] = global_state["annual_electricity_kwh"] - reduction
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+        new_global["annual_electricity_kwh"] = max(0, global_state["annual_electricity_kwh"] - reduction)
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     else:
         reduction = global_state["heating_baseline"] * 0.13
-        new_global["annual_gas_kwh"] = global_state["annual_gas_kwh"] - reduction
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - reduction
-    
+        new_global["annual_gas_kwh"] = max(0, global_state["annual_gas_kwh"] - reduction)
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - reduction)
+
     return new_global, new_adjusted
+
 
 # Smart Thermostat
 def smart_thermostat_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_global = global_state.copy()
     new_adjusted = adjusted_state.copy()
-    
-    if global_state.get("fuel_type") == "heat_pump":
+
+    if profile.get("fuel_type") == "heat_pump":
         old_heating = global_state["heating_electricity_kwh"]
         new_heating = old_heating * 0.94
         reduction = old_heating - new_heating
         new_global["heating_electricity_kwh"] = new_heating
-        new_global["annual_electricity_kwh"] = global_state["annual_electricity_kwh"] - reduction
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+        new_global["annual_electricity_kwh"] = max(0, global_state["annual_electricity_kwh"] - reduction)
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     else:
         reduction = global_state["heating_baseline"] * 0.06
-        new_global["annual_gas_kwh"] = global_state["annual_gas_kwh"] - reduction
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - reduction
-    
+        new_global["annual_gas_kwh"] = max(0, global_state["annual_gas_kwh"] - reduction)
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - reduction)
+
     return new_global, new_adjusted
 
-#LED Lighting
+
+# LED Lighting
 def LED_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
-    new_adjusted = adjusted_state.copy() 
+    new_adjusted = adjusted_state.copy()
     new_global = global_state.copy()
     total_lighting_energy = global_state["lighting_baseline"]
-    total_bulbs = (profile.get("incandescent_bulbs", 0) + 
-                   profile.get("cfl_bulbs", 0) +  
+    total_bulbs = (profile.get("incandescent_bulbs", 0) +
+                   profile.get("cfl_bulbs", 0) +
                    profile.get("led_bulbs", 0))
     if total_bulbs == 0:
         return global_state, adjusted_state
@@ -93,22 +97,24 @@ def LED_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     incandescent_reduction = profile.get("incandescent_bulbs", 0) * energy_per_bulb * 0.85
     cfl_reduction          = profile.get("cfl_bulbs", 0)          * energy_per_bulb * 0.308
     total_reduction = incandescent_reduction + cfl_reduction
-    new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - total_reduction    
-    new_adjusted["lighting_baseline"] = total_lighting_energy - total_reduction
-    new_global["lighting_baseline"] = total_lighting_energy - total_reduction
+    new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - total_reduction)
+    new_adjusted["lighting_baseline"] = max(0, total_lighting_energy - total_reduction)
+    new_global["lighting_baseline"] = max(0, total_lighting_energy - total_reduction)
     return new_global, new_adjusted
 
-#Smart sockets
+
+# Smart sockets
 def smart_sockets_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
-    new_adjusted = adjusted_state.copy() 
+    new_adjusted = adjusted_state.copy()
     new_global = global_state.copy()
     socket_energy = global_state["socket_baseline"]
     new_energy = socket_energy * 0.7
     reduction = socket_energy - new_energy
-    new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction    
+    new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     new_adjusted["socket_baseline"] = new_energy
     new_global["socket_baseline"] = new_energy
     return new_global, new_adjusted
+
 
 # Heat Pumps
 def heat_pumps_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
@@ -119,7 +125,7 @@ def heat_pumps_apply(global_state: dict, adjusted_state: dict, profile: dict) ->
     efficiency_ratio = boiler_efficiency / 3.5
     hp_elec_needed = adjusted_state["heating_baseline"] * efficiency_ratio
     new_global["annual_electricity_kwh"] = global_state["annual_electricity_kwh"] + hp_elec_needed
-    new_global["annual_gas_kwh"] = global_state["cooking_baseline"]  # only cooking gas remains
+    new_global["annual_gas_kwh"] = global_state["cooking_baseline"]
     new_global["heating_electricity_kwh"] = hp_elec_needed
     new_global["fuel_type"] = "heat_pump"
     new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] + hp_elec_needed
@@ -127,7 +133,8 @@ def heat_pumps_apply(global_state: dict, adjusted_state: dict, profile: dict) ->
     new_adjusted["heating_electricity_kwh"] = hp_elec_needed
     new_adjusted["fuel_type"] = "heat_pump"
     return new_global, new_adjusted
-    
+
+
 # Washing Machine Temperature Reduction
 def reduce_wm_temperature_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_adjusted = adjusted_state.copy()
@@ -135,26 +142,28 @@ def reduce_wm_temperature_apply(global_state: dict, adjusted_state: dict, profil
     temperature = profile.get("washing_temperature")
     washing_energy = uses_per_week * 52 * 1
     if temperature == "40":
-        reduction = washing_energy * 0.38  # 38% saving switching to 30 degrees
+        reduction = washing_energy * 0.38
     else:
         reduction = washing_energy * 0.67
-    new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+    new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     return global_state, new_adjusted
+
 
 # Bleeding Radiators
 def bleed_radiators_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_adjusted = adjusted_state.copy()
     if global_state.get("fuel_type") == "heat_pump":
         radiator_heating = global_state["heating_electricity_kwh"] * 0.77
-        reduction = radiator_heating * 0.14  # 14% improvement
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+        reduction = radiator_heating * 0.14
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     else:
         radiator_gas = global_state["heating_baseline"] * 0.77
         reduction = radiator_gas * 0.14
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - reduction
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - reduction)
     return global_state, new_adjusted
+
 
 # Water Cylinder Jacket
 def water_cylinder_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
@@ -162,18 +171,18 @@ def water_cylinder_apply(global_state: dict, adjusted_state: dict, profile: dict
     new_adjusted = adjusted_state.copy()
     water_heating = global_state["water_heating_kwh"]
     reduction = water_heating * 0.75
-    
+
     if global_state.get("fuel_type") == "heat_pump":
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     else:
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - reduction
-    
-    # Both states update water_heating_kwh
-    new_global["water_heating_kwh"] = global_state["water_heating_kwh"] - reduction
-    new_adjusted["water_heating_kwh"] = adjusted_state["water_heating_kwh"] - reduction
-    
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - reduction)
+
+    new_global["water_heating_kwh"] = max(0, global_state["water_heating_kwh"] - reduction)
+    new_adjusted["water_heating_kwh"] = max(0, adjusted_state["water_heating_kwh"] - reduction)
+
     return new_global, new_adjusted
+
 
 # Reflective Radiator Panels
 def radiator_panels_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
@@ -181,14 +190,15 @@ def radiator_panels_apply(global_state: dict, adjusted_state: dict, profile: dic
     if global_state.get("fuel_type") == "heat_pump":
         radiator_wall_heat = global_state["heating_electricity_kwh"] * 0.0385
         reduction = radiator_wall_heat * 0.95
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     else:
         radiator_wall_heat = global_state["heating_baseline"] * 0.0385
         reduction = radiator_wall_heat * 0.95
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - reduction
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - reduction)
     return global_state, new_adjusted
+
 
 # Window Draught Proofing
 def window_dp_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
@@ -196,14 +206,15 @@ def window_dp_apply(global_state: dict, adjusted_state: dict, profile: dict) -> 
     if global_state.get("fuel_type") == "heat_pump":
         window_heat = global_state["heating_electricity_kwh"] * 0.077
         reduction = window_heat * 0.2
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     else:
         window_heat = global_state["heating_baseline"] * 0.077
         reduction = window_heat * 0.2
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - reduction
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - reduction)
     return global_state, new_adjusted
+
 
 # Door Draught Proofing
 def door_dp_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
@@ -211,79 +222,13 @@ def door_dp_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tu
     if global_state.get("fuel_type") == "heat_pump":
         door_heat = global_state["heating_electricity_kwh"] * 0.1155
         reduction = door_heat * 0.2
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - reduction
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - reduction)
     else:
         door_heat = global_state["heating_baseline"] * 0.1155
         reduction = door_heat * 0.2
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - reduction
-    return global_state, new_adjusted
-
-# Loft Insulation
-def loft_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
-    new_adjusted = adjusted_state.copy()
-    property_type = profile.get("property_type")
-    if profile.get("loft_thickness") == '0mm':
-        kwh_reduction = INSULATION_KWH_SAVING[property_type]["loft_big"]
-    else:
-        kwh_reduction = INSULATION_KWH_SAVING[property_type]["loft_small"]
-
-    if global_state.get("fuel_type") == "heat_pump":
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - kwh_reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - kwh_reduction
-    else:
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - kwh_reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - kwh_reduction
-
-    return global_state, new_adjusted
-
-
-# Cavity Insulation
-def cavity_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
-    new_adjusted = adjusted_state.copy()
-    property_type = profile.get("property_type")
-    kwh_reduction = INSULATION_KWH_SAVING[property_type]["cavity"]
-
-    if global_state.get("fuel_type") == "heat_pump":
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - kwh_reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - kwh_reduction
-    else:
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - kwh_reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - kwh_reduction
-
-    return global_state, new_adjusted
-
-
-# Solid Wall Insulation
-def solid_wall_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
-    new_adjusted = adjusted_state.copy()
-    property_type = profile.get("property_type")
-    kwh_reduction = INSULATION_KWH_SAVING[property_type]["solid_wall"]
-
-    if global_state.get("fuel_type") == "heat_pump":
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - kwh_reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - kwh_reduction
-    else:
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - kwh_reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - kwh_reduction
-
-    return global_state, new_adjusted
-
-
-# Floor Insulation
-def floor_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
-    new_adjusted = adjusted_state.copy()
-    property_type = profile.get("property_type")
-    kwh_reduction = INSULATION_KWH_SAVING[property_type]["floor"]
-
-    if global_state.get("fuel_type") == "heat_pump":
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - kwh_reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - kwh_reduction
-    else:
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - kwh_reduction
-        new_adjusted["heating_baseline"] = adjusted_state["heating_baseline"] - kwh_reduction
-
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - reduction)
     return global_state, new_adjusted
 
 
@@ -295,22 +240,23 @@ def shorter_shower_apply(global_state: dict, adjusted_state: dict, profile: dict
     water_usage = global_state["annual_water_m3"]
     if global_state.get("shower_type") == "electric_shower":
         water_saving = num_people * 365 * 0.012
-        new_global["annual_water_m3"] = water_usage - water_saving
-        new_adjusted["annual_water_m3"] = water_usage - water_saving
+        new_global["annual_water_m3"] = max(0, water_usage - water_saving)
+        new_adjusted["annual_water_m3"] = max(0, water_usage - water_saving)
     else:
         water_saving = num_people * 365 * 0.03
-        new_global["annual_water_m3"] = water_usage - water_saving
-        new_adjusted["annual_water_m3"] = water_usage - water_saving
+        new_global["annual_water_m3"] = max(0, water_usage - water_saving)
+        new_adjusted["annual_water_m3"] = max(0, water_usage - water_saving)
     heat_reduction = water_saving * 35.1
     if global_state.get("shower_type") != "electric_shower":
         if global_state.get("fuel_type") == "heat_pump":
-            new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - heat_reduction
-            new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - heat_reduction
+            new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - heat_reduction)
+            new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - heat_reduction)
         else:
-            new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - heat_reduction
-        new_global["water_heating_kwh"] = global_state["water_heating_kwh"] - heat_reduction
-        new_adjusted["water_heating_kwh"] = adjusted_state["water_heating_kwh"] - heat_reduction
+            new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - heat_reduction)
+        new_global["water_heating_kwh"] = max(0, global_state["water_heating_kwh"] - heat_reduction)
+        new_adjusted["water_heating_kwh"] = max(0, adjusted_state["water_heating_kwh"] - heat_reduction)
     return new_global, new_adjusted
+
 
 # Water Saving Shower Heads
 def water_saving_shower_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
@@ -319,17 +265,84 @@ def water_saving_shower_apply(global_state: dict, adjusted_state: dict, profile:
     num_people = global_state["num_people"]
     water_usage = global_state["annual_water_m3"]
     time = profile.get("shower_time")
-    shower_usage = time * num_people * 0.015 * 365 # per-person daily minutes -> yearly household m3
+    shower_usage = time * num_people * 365 * 0.015
     new_shower_usage = shower_usage * 0.48
     reduction = shower_usage - new_shower_usage
-    new_global["annual_water_m3"] = water_usage - reduction
-    new_adjusted["annual_water_m3"] = water_usage - reduction
+    new_global["annual_water_m3"] = max(0, water_usage - reduction)
+    new_adjusted["annual_water_m3"] = max(0, water_usage - reduction)
     heat_reduction = reduction * 35.1
     if global_state.get("fuel_type") == "heat_pump":
-        new_adjusted["heating_electricity_kwh"] = adjusted_state["heating_electricity_kwh"] - heat_reduction
-        new_adjusted["annual_electricity_kwh"] = adjusted_state["annual_electricity_kwh"] - heat_reduction
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - heat_reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - heat_reduction)
     else:
-        new_adjusted["annual_gas_kwh"] = adjusted_state["annual_gas_kwh"] - heat_reduction
-    new_global["water_heating_kwh"] = global_state["water_heating_kwh"] - heat_reduction
-    new_adjusted["water_heating_kwh"] = adjusted_state["water_heating_kwh"] - heat_reduction
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - heat_reduction)
+    new_global["water_heating_kwh"] = max(0, global_state["water_heating_kwh"] - heat_reduction)
+    new_adjusted["water_heating_kwh"] = max(0, adjusted_state["water_heating_kwh"] - heat_reduction)
     return new_global, new_adjusted
+
+
+# Loft Insulation
+def loft_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
+    new_adjusted = adjusted_state.copy()
+    property_type = profile.get("property_type")
+    if profile.get("loft_thickness") == '0mm':
+        kwh_reduction = INSULATION_KWH_SAVING[property_type]["loft_big"]
+    else:
+        kwh_reduction = INSULATION_KWH_SAVING[property_type]["loft_small"]
+
+    if global_state.get("fuel_type") == "heat_pump":
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - kwh_reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - kwh_reduction)
+    else:
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - kwh_reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - kwh_reduction)
+
+    return global_state, new_adjusted
+
+
+# Cavity Insulation
+def cavity_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
+    new_adjusted = adjusted_state.copy()
+    property_type = profile.get("property_type")
+    kwh_reduction = INSULATION_KWH_SAVING[property_type]["cavity"]
+
+    if global_state.get("fuel_type") == "heat_pump":
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - kwh_reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - kwh_reduction)
+    else:
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - kwh_reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - kwh_reduction)
+
+    return global_state, new_adjusted
+
+
+# Solid Wall Insulation
+def solid_wall_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
+    new_adjusted = adjusted_state.copy()
+    property_type = profile.get("property_type")
+    kwh_reduction = INSULATION_KWH_SAVING[property_type]["solid_wall"]
+
+    if global_state.get("fuel_type") == "heat_pump":
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - kwh_reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - kwh_reduction)
+    else:
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - kwh_reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - kwh_reduction)
+
+    return global_state, new_adjusted
+
+
+# Floor Insulation
+def floor_insulation_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
+    new_adjusted = adjusted_state.copy()
+    property_type = profile.get("property_type")
+    kwh_reduction = INSULATION_KWH_SAVING[property_type]["floor"]
+
+    if global_state.get("fuel_type") == "heat_pump":
+        new_adjusted["heating_electricity_kwh"] = max(0, adjusted_state["heating_electricity_kwh"] - kwh_reduction)
+        new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - kwh_reduction)
+    else:
+        new_adjusted["annual_gas_kwh"] = max(0, adjusted_state["annual_gas_kwh"] - kwh_reduction)
+        new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - kwh_reduction)
+
+    return global_state, new_adjusted
