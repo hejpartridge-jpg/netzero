@@ -13,7 +13,7 @@ class ProfileStore extends ChangeNotifier {
   double monthlySolarKwh = 0;
   String tariff = 'standard';
   double monthlyWaterSpend = 0;
-  bool combinedBilling = false;
+  bool? combinedBilling;
   double monthlyCombinedSpend = 0;
   int billingMonth = DateTime.now().month == 1 ? 12 : DateTime.now().month - 1;
 
@@ -103,7 +103,7 @@ class ProfileStore extends ChangeNotifier {
       'fuel_type':                fuelType,
       'monthly_elec_spend':       monthlyElecSpend,
       'monthly_combined_spend':   monthlyCombinedSpend,
-      'combined_billing':         combinedBilling,
+      'combined_billing':         combinedBilling ?? false,
       'billing_month':            billingMonth,
       'tariff':                   tariff,
       'monthly_solar':            monthlySolarKwh,

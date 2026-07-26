@@ -454,6 +454,22 @@ class _EnergyScreenState extends State<EnergyScreen> {
   String _tariff = 'standard';
 
   @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _hasSolar = profile.solarPanels;
+    _solarController.text = profile.monthlySolarKwh > 0 ? profile.monthlySolarKwh.toString() : '';
+    _fuelType = profile.fuelType;
+    _hobType = profile.hobType;
+    _combinedBilling = profile.combinedBilling;
+    _combinedController.text = profile.monthlyCombinedSpend > 0 ? profile.monthlyCombinedSpend.toString() : '';
+    _gasController.text = profile.monthlyGasSpend > 0 ? profile.monthlyGasSpend.toString() : '';
+    _electricityController.text = profile.monthlyElecSpend > 0 ? profile.monthlyElecSpend.toString() : '';
+    _waterController.text = profile.monthlyWaterSpend > 0 ? profile.monthlyWaterSpend.toString() : '';
+    _tariff = profile.tariff;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context);
 
@@ -719,7 +735,7 @@ class _EnergyScreenState extends State<EnergyScreen> {
                         profile.monthlySolarKwh = _hasSolar ? (double.tryParse(_solarController.text) ?? 0) : 0;
                         profile.fuelType = _fuelType;
                         profile.hobType = _hobType;
-                        profile.combinedBilling = _combinedBilling?? false;
+                        profile.combinedBilling = _combinedBilling;
                         profile.monthlyCombinedSpend = (_combinedBilling ?? false) ? (double.tryParse(_combinedController.text) ?? 0) : 0;
                         profile.monthlyGasSpend = (_combinedBilling ?? false) ? 0 : (double.tryParse(_gasController.text) ?? 0);
                         profile.monthlyElecSpend = (_combinedBilling ?? false) ? 0 : (double.tryParse(_electricityController.text) ?? 0);
@@ -761,6 +777,17 @@ class _TransportScreenState extends State<TransportScreen> {
   final _trainController = TextEditingController();
   String _fuelType = 'petrol';
   String _carSize = 'supermini';
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _mileageController.text = profile.weeklyMileage > 0 ? profile.weeklyMileage.toString() : '';
+    _busController.text = profile.monthlyBusSpend > 0 ? profile.monthlyBusSpend.toString() : '';
+    _trainController.text = profile.monthlyTrainSpend > 0 ? profile.monthlyTrainSpend.toString() : '';
+    _fuelType = profile.carFuel;
+    _carSize = profile.carSize;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1030,6 +1057,14 @@ class FlightsScreen extends StatefulWidget {
 class _FlightsScreenState extends State<FlightsScreen> {
   List<Map<String, dynamic>> _trips = [];
   List<Map<String, dynamic>> _ukStays = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _trips = profile.flights.map((trip) => Map<String, dynamic>.from(trip)).toList();
+    _ukStays = profile.ukStays.map((stay) => Map<String, dynamic>.from(stay)).toList();
+  }
 
   void _addTrip() {
     setState(() {
@@ -1587,6 +1622,17 @@ class _DietScreenState extends State<DietScreen> {
   String _normalWaste = 'recycle';
 
   @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _rmDays = profile.rmDays;
+    _wmDays = profile.wmDays;
+    _shoppingController.text = profile.nonMeatSpend > 0 ? profile.nonMeatSpend.toString() : '';
+    _foodWaste = profile.foodWasteAction;
+    _normalWaste = profile.wasteAction;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context);
 
@@ -1601,168 +1647,170 @@ class _DietScreenState extends State<DietScreen> {
       ),
       body: SafeArea(
         child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
 
-                SizedBox(height: 0),
+                  SizedBox(height: 0),
 
-                Text(
-                  'Diet And Waste',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-
-                progressBar(0.5),
-                SizedBox(height: 24),
-
-                Text(
-                  'Eating and waste habits',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 32),
-
-                // Red meat days
-                Text('Number of days a week that you eat red meat',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        if (_rmDays > 0) setState(() => _rmDays--);
-                      },
-                      icon: Icon(Icons.remove_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
-                    ),
-                    Text(
-                      '$_rmDays',
-                      style: TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        if (_rmDays < 7) setState(() => _rmDays++);
-                      },
-                      icon: Icon(Icons.add_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10),
-
-                // White meat days
-                Text('Number of days a week that you eat white meat',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        if (_wmDays > 0) setState(() => _wmDays--);
-                      },
-                      icon: Icon(Icons.remove_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
-                    ),
-                    Text(
-                      '$_wmDays',
-                      style: TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        if (_wmDays < 7) setState(() => _wmDays++);
-                      },
-                      icon: Icon(Icons.add_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 10),
-
-                // Shopping spend
-                Text('Weekly shopping spend on non-meat items',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: _shoppingController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                  decoration: InputDecoration(
-                    hintText: 'e.g. £60',
-                    suffixText: 'per week',
+                  Text(
+                    'Diet And Waste',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: 24),
+                  SizedBox(height: 12),
 
-                // Food waste dropdown
-                Text('What do you generally do with your food waste?',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _foodWaste,
-                  decoration: InputDecoration(),
-                  items: [
-                    DropdownMenuItem(value: 'bin', child: Text('Put it in the normal bin')),
-                    DropdownMenuItem(value: 'compost', child: Text('Compost it/Food waste bin')),
-                  ],
-                  onChanged: (value) => setState(() => _foodWaste = value!),
-                ),
-                SizedBox(height: 24),
+                  progressBar(0.5),
+                  SizedBox(height: 24),
 
-                // Normal waste dropdown
-                Text('What do you generally do with your everyday waste?',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _normalWaste,
-                  decoration: InputDecoration(),
-                  items: [
-                    DropdownMenuItem(value: 'recycle', child: Text('Recycle')),
-                    DropdownMenuItem(value: 'non_recycle', child: Text('Put it in the normal bin')),
-                    DropdownMenuItem(value: 'upcycle', child: Text('Upcycle')),
-                  ],
-                  onChanged: (value) => setState(() => _normalWaste = value!),
-                ),
-                SizedBox(height: 24),                
+                  Text(
+                    'Eating and waste habits',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32),
 
-                Spacer(),
+                  // Red meat days
+                  Text('Number of days a week that you eat red meat',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (_rmDays > 0) setState(() => _rmDays--);
+                        },
+                        icon: Icon(Icons.remove_circle_outline),
+                        color: kPrimary,
+                        iconSize: 32,
+                      ),
+                      Text(
+                        '$_rmDays',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          if (_rmDays < 7) setState(() => _rmDays++);
+                        },
+                        icon: Icon(Icons.add_circle_outline),
+                        color: kPrimary,
+                        iconSize: 32,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
 
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      profile.rmDays = _rmDays;
-                      profile.wmDays = _wmDays;
-                      profile.nonMeatSpend = double.tryParse(_shoppingController.text) ?? 0;
-                      profile.foodWasteAction = _foodWaste;
-                      profile.wasteAction = _normalWaste;
-                      profile.update();
-                      context.go('/pets');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  // White meat days
+                  Text('Number of days a week that you eat white meat',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (_wmDays > 0) setState(() => _wmDays--);
+                        },
+                        icon: Icon(Icons.remove_circle_outline),
+                        color: kPrimary,
+                        iconSize: 32,
+                      ),
+                      Text(
+                        '$_wmDays',
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          if (_wmDays < 7) setState(() => _wmDays++);
+                        },
+                        icon: Icon(Icons.add_circle_outline),
+                        color: kPrimary,
+                        iconSize: 32,
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 10),
+
+                  // Shopping spend
+                  Text('Weekly shopping spend on non-meat items',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _shoppingController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    decoration: InputDecoration(
+                      hintText: 'e.g. £60',
+                      suffixText: 'per week',
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 24),
+
+                  // Food waste dropdown
+                  Text('What do you generally do with your food waste?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _foodWaste,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'bin', child: Text('Put it in the normal bin')),
+                      DropdownMenuItem(value: 'compost', child: Text('Compost it/Food waste bin')),
+                    ],
+                    onChanged: (value) => setState(() => _foodWaste = value!),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Normal waste dropdown
+                  Text('What do you generally do with your everyday waste?',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _normalWaste,
+                    decoration: InputDecoration(),
+                    items: [
+                      DropdownMenuItem(value: 'recycle', child: Text('Recycle')),
+                      DropdownMenuItem(value: 'non_recycle', child: Text('Put it in the normal bin')),
+                      DropdownMenuItem(value: 'upcycle', child: Text('Upcycle')),
+                    ],
+                    onChanged: (value) => setState(() => _normalWaste = value!),
+                  ),
+                  SizedBox(height: 24),                
+
+                  SizedBox(height: 32),
+
+                  // Next button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        profile.rmDays = _rmDays;
+                        profile.wmDays = _wmDays;
+                        profile.nonMeatSpend = double.tryParse(_shoppingController.text) ?? 0;
+                        profile.foodWasteAction = _foodWaste;
+                        profile.wasteAction = _normalWaste;
+                        profile.update();
+                        context.go('/pets');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        'Next →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1779,6 +1827,13 @@ class PetsScreen extends StatefulWidget {
 
 class _PetsScreenState extends State<PetsScreen> {
   List<Map<String, dynamic>> _pets = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _pets = profile.pets.map((pet) => Map<String, dynamic>.from(pet)).toList();
+  }
 
   void _addPet() {
     setState(() {
@@ -2028,6 +2083,26 @@ class _SpendingScreenState extends State<SpendingScreen> {
   final _servicesController = TextEditingController(text: '0');
 
   @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _takeawayController.text = profile.monthlyTakeaway > 0 ? profile.monthlyTakeaway.toString() : '0';
+    _drinksController.text = profile.monthlyDrinks > 0 ? profile.monthlyDrinks.toString() : '0';
+    _alcoholController.text = profile.monthlyAlcohol > 0 ? profile.monthlyAlcohol.toString() : '0';
+    _tobaccoController.text = profile.monthlyTobacco > 0 ? profile.monthlyTobacco.toString() : '0';
+    _clothesController.text = profile.monthlyClothes > 0 ? profile.monthlyClothes.toString() : '0';
+    _soapController.text = profile.monthlySoap > 0 ? profile.monthlySoap.toString() : '0';
+    _medicineController.text = profile.monthlyMedicine > 0 ? profile.monthlyMedicine.toString() : '0';
+    _electronicsController.text = profile.yearlyElectronics > 0 ? profile.yearlyElectronics.toString() : '0';
+    _machineryController.text = profile.yearlyMachinery > 0 ? profile.yearlyMachinery.toString() : '0';
+    _educationController.text = profile.monthlyEducation > 0 ? profile.monthlyEducation.toString() : '0';
+    _healthcareController.text = profile.monthlyHealthcare > 0 ? profile.monthlyHealthcare.toString() : '0';
+    _careController.text = profile.monthlyCare > 0 ? profile.monthlyCare.toString() : '0';
+    _furnitureController.text = profile.yearlyFurniture > 0 ? profile.yearlyFurniture.toString() : '0';
+    _servicesController.text = profile.monthlyServices > 0 ? profile.monthlyServices.toString() : '0';
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context);
 
@@ -2198,6 +2273,13 @@ class HouseholdScreen extends StatefulWidget {
 
 class _HouseholdScreenState extends State<HouseholdScreen> {
   int _numPeople = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _numPeople = profile.numPeople;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2711,6 +2793,16 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
   bool _savingShower = false;
 
   @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _smartThermostat = profile.smartThermostat;
+    _savingSockets = profile.savingSockets;
+    _batteryStorage = profile.batteryStorage;
+    _savingShower = profile.savingShower;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context);
 
@@ -2834,6 +2926,19 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
   String _boilerAge = '10-15';
   String _showerType = 'power_mixer';
   String _wallType = 'cavity';
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _incandescentController.text = profile.incandescentBulbs > 0 ? profile.incandescentBulbs.toString() : '0';
+    _cflController.text = profile.cflBulbs > 0 ? profile.cflBulbs.toString() : '0';
+    _ledController.text = profile.ledBulbs > 0 ? profile.ledBulbs.toString() : '0';
+    _propertyType = profile.propertyType;
+    _boilerAge = profile.boilerAge;
+    _showerType = profile.showerType;
+    _wallType = profile.wallType;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3054,6 +3159,19 @@ class _InsulationScreenState extends State<InsulationScreen> {
   bool _floorInsulation = false;
 
   @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _insulationThickness = profile.insulationThickness;
+    _windowDP = profile.windowDP;
+    _doorDP = profile.doorDP;
+    _cylinderJacket = profile.cylinderJacket;
+    _radiatorPanels = profile.radiatorPanels;
+    _wallInsulation = profile.wallInsulation;
+    _floorInsulation = profile.floorInsulation;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context);
 
@@ -3210,6 +3328,16 @@ class _HabitScreenState extends State<HabitScreen> {
   String _washingTemp = '40';
 
   @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _showerTimeController.text = profile.showerTime > 0 ? profile.showerTime.toString() : '5';
+    _radiatorBleeding = profile.radiatorBleeding;
+    _washingController.text = profile.washingFrequency > 0 ? profile.washingFrequency.toString() : '1';
+    _washingTemp = profile.washingTemperature;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context);
 
@@ -3347,6 +3475,13 @@ class HomeownerScreen extends StatefulWidget {
 
 class _HomeownerScreenState extends State<HomeownerScreen> {
   String _homeowner = 'homeowner';
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _homeowner = profile.homeowner;
+  }
 
   @override
   Widget build(BuildContext context) {
