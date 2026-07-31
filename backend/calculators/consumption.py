@@ -19,12 +19,16 @@ def calculate_pet_food_emissions(pets: list) -> float:
 
 # ── Human food emissions ──────────────────────────────────────────────────
 def calculate_red_meat_emissions(rm_days: float, num_people: int) -> float:
+    if num_people is None:
+        return 0
     factor = DIET_FACTORS.get("red_meat")
     if factor is None:
         raise ValueError("red meat factor not found in emission factors")
     return factor * rm_days * num_people * 52
 
 def calculate_white_meat_emissions(wm_days: float, num_people: int) -> float:
+    if num_people is None:
+        return 0
     factor = DIET_FACTORS.get("non_red_meat")
     if factor is None:
         raise ValueError("white meat factor not found in emission factors")
@@ -38,6 +42,8 @@ def calculate_food_emissions(non_meat_spend: float) -> float:
 
 # ── Food waste emissions ──────────────────────────────────────────────────
 def calculate_food_waste_emissions(action: str, num_people: int) -> float:
+    if action is None or num_people is None:
+        return 0
     factor = FOOD_WASTE_FACTORS.get(action)
     if factor is None:
         raise ValueError(f"Unknown waste action: '{action}'. Must be 'bin' or 'compost'")
@@ -45,6 +51,8 @@ def calculate_food_waste_emissions(action: str, num_people: int) -> float:
 
 # ── Household waste emissions ──────────────────────────────────────────────────
 def calculate_household_waste_emissions(action: str, num_people: int) -> float:
+    if action is None or num_people is None:
+        return 0
     auto_waste_factor = 41.076 * num_people
     factor = WASTE_FACTORS.get(action)
     if factor is None:

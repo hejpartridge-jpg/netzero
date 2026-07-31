@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+double _d(dynamic v, double fallback) => (v as num?)?.toDouble() ?? fallback;
+int _i(dynamic v, int fallback) => (v as num?)?.toInt() ?? fallback;
+String _s(dynamic v, String fallback) => v as String? ?? fallback;
+bool _b(dynamic v, bool fallback) => v as bool? ?? fallback;
+
 
 class ProfileStore extends ChangeNotifier {
   // ── Household ──────────────────────────────────────────
-  int numPeople = 1;
+  int? numPeople;
   String address = '';
   String postcode = '';
 
@@ -34,8 +42,8 @@ class ProfileStore extends ChangeNotifier {
   double nonMeatSpend = 0;
 
   // ── Waste ──────────────────────────────────────────────
-  String foodWasteAction = 'bin';
-  String wasteAction = 'non_recycle';
+  String? foodWasteAction;
+  String? wasteAction;
 
   // ── Pets ───────────────────────────────────────────────
   List<Map<String, dynamic>> pets = [];
@@ -163,6 +171,125 @@ class ProfileStore extends ChangeNotifier {
     };
   }
 
-  // Call this whenever a value changes to notify all screens
-  void update() => notifyListeners();
+  Map<String, dynamic> _toFirestoreData() {
+    return {
+      ...toProfile(),
+      'completed_actions': completedActions,
+      'dismissed_actions': dismissedActions,
+    };
+  }
+
+  Future<void> loadFromFirestore() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  try {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (!doc.exists) return;
+    final data = doc.data();
+    if (data == null) return;
+
+    numPeople = (data['num_people'] as num?)?.toInt() ?? numPeople;
+    monthlyGasSpend = _d(data['monthly_gas_spend'], monthlyGasSpend);
+    fuelType = _s(data['fuel_type'], fuelType);
+    monthlyElecSpend = _d(data['monthly_elec_spend'], monthlyElecSpend);
+    monthlyCombinedSpend = _d(data['monthly_combined_spend'], monthlyCombinedSpend);
+    combinedBilling = data['combined_billing'] as bool?;
+    billingMonth = _i(data['billing_month'], billingMonth);
+    tariff = _s(data['tariff'], tariff);
+    monthlySolarKwh = _d(data['monthly_solar'], monthlySolarKwh);
+    monthlyWaterSpend = _d(data['monthly_water_spend'], monthlyWaterSpend);
+    weeklyMileage = _d(data['weekly_mileage'], weeklyMileage);
+    carFuel = _s(data['car_fuel'], carFuel);
+    carSize = _s(data['car_size'], carSize);
+    monthlyBusSpend = _d(data['monthly_bus_spend'], monthlyBusSpend);
+    monthlyTrainSpend = _d(data['monthly_train_spend'], monthlyTrainSpend);
+
+    if (data['flights'] != null) {
+      flights = List<Map<String, dynamic>>.from(
+          (data['flights'] as List).map((e) => Map<String, dynamic>.from(e)));
+    }
+    if (data['uk_stays'] != null) {
+      ukStays = List<Map<String, dynamic>>.from(
+          (data['uk_stays'] as List).map((e) => Map<String, dynamic>.from(e)));
+    }
+    if (data['pets'] != null) {
+      pets = List<Map<String, dynamic>>.from(
+          (data['pets'] as List).map((e) => Map<String, dynamic>.from(e)));
+    }
+
+    rmDays = _i(data['rm_days'], rmDays);
+    wmDays = _i(data['wm_days'], wmDays);
+    nonMeatSpend = _d(data['non_meat_spend'], nonMeatSpend);
+    foodWasteAction = data['food_waste_action'] as String? ?? foodWasteAction;
+    wasteAction = data['waste_action'] as String? ?? wasteAction;
+    monthlyTakeaway = _d(data['monthly_takeaway'], monthlyTakeaway);
+    monthlyDrinks = _d(data['monthly_drinks'], monthlyDrinks);
+    monthlyAlcohol = _d(data['monthly_alcohol'], monthlyAlcohol);
+    monthlyTobacco = _d(data['monthly_tobacco'], monthlyTobacco);
+    monthlyClothes = _d(data['monthly_clothes'], monthlyClothes);
+    monthlySoap = _d(data['monthly_soap'], monthlySoap);
+    monthlyMedicine = _d(data['monthly_medicine'], monthlyMedicine);
+    yearlyElectronics = _d(data['yearly_electronics'], yearlyElectronics);
+    yearlyMachinery = _d(data['yearly_machinery'], yearlyMachinery);
+    monthlyEducation = _d(data['monthly_education'], monthlyEducation);
+    monthlyHealthcare = _d(data['monthly_healthcare'], monthlyHealthcare);
+    monthlyCare = _d(data['monthly_care'], monthlyCare);
+    yearlyFurniture = _d(data['yearly_furniture'], yearlyFurniture);
+    monthlyServices = _d(data['monthly_services'], monthlyServices);
+    smartThermostat = _b(data['smart_thermostat'], smartThermostat);
+    savingSockets = _b(data['energy_saving_sockets'], savingSockets);
+    solarPanels = _b(data['solar_panels'], solarPanels);
+    batteryStorage = _b(data['battery_storage'], batteryStorage);
+    hobType = _s(data['hob_type'], hobType);
+    incandescentBulbs = _i(data['incandescent_bulbs'], incandescentBulbs);
+    cflBulbs = _i(data['cfl_bulbs'], cflBulbs);
+    ledBulbs = _i(data['led_bulbs'], ledBulbs);
+    propertyType = _s(data['property_type'], propertyType);
+    boilerAge = _s(data['boiler_age'], boilerAge);
+    insulationThickness = _s(data['loft_thickness'], insulationThickness);
+    windowDP = _b(data['window_draught_proofing'], windowDP);
+    doorDP = _b(data['door_draught_proofing'], doorDP);
+    cylinderJacket = _b(data['water_cylinder_jacket'], cylinderJacket);
+    radiatorPanels = _b(data['radiator_panels'], radiatorPanels);
+    showerType = _s(data['shower_type'], showerType);
+    savingShower = _b(data['water_saving_shower'], savingShower);
+    wallType = _s(data['wall_type'], wallType);
+    wallInsulation = _b(data['wall_insulation'], wallInsulation);
+    floorInsulation = _b(data['floor_insulation'], floorInsulation);
+    showerTime = _i(data['shower_time'], showerTime);
+    radiatorBleeding = _s(data['last_radiator_bleed'], radiatorBleeding);
+    washingFrequency = _i(data['uses_per_week'], washingFrequency);
+    washingTemperature = _s(data['washing_temperature'], washingTemperature);
+    homeowner = _s(data['homeowner'], homeowner);
+
+    if (data['completed_actions'] != null) {
+      completedActions = List<String>.from(data['completed_actions']);
+    }
+    if (data['dismissed_actions'] != null) {
+      dismissedActions = List<Map<String, dynamic>>.from(
+          (data['dismissed_actions'] as List).map((e) => Map<String, dynamic>.from(e)));
+    }
+  } catch (e) {
+    print('Failed to load saved progress: $e');
+  }
+  }
+
+  Future<void> _saveToFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set(_toFirestoreData());
+    } catch (e) {
+      print('Failed to save progress: $e');
+    }
+  }
+
+  void update() {
+    notifyListeners();
+    _saveToFirestore();
+  }
 }

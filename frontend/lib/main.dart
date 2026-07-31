@@ -6,8 +6,15 @@ import 'theme.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(
     ChangeNotifierProvider(
       create: (_) => ProfileStore(),
@@ -20,9 +27,19 @@ void main() {
 final _router = GoRouter(
   initialLocation: '/welcome',
   routes: [
+    GoRoute(path: '/auth', builder: (context, state) => AuthChoiceScreen()),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) {
+        final redirectTo = state.uri.queryParameters['redirect'] ?? '/info';
+        return LoginScreen(redirectTo: redirectTo);
+      },
+    ),    
     GoRoute(path: '/welcome',      builder: (context, state) => WelcomeScreen()),
     GoRoute(path: '/info',         builder: (context, state) => InfoScreen()),
     GoRoute(path: '/phase1',       builder: (context, state) => Phase1Screen()),
+    GoRoute(path: '/num-people', builder: (context, state) => NumPeopleScreen()),
+    GoRoute(path: '/solar', builder: (context, state) => SolarPanelsScreen()),
     GoRoute(path: '/household',    builder: (context, state) => HouseholdScreen()),
     GoRoute(path: '/energy',       builder: (context, state) => EnergyScreen()),
     GoRoute(path: '/transport',    builder: (context, state) => TransportScreen()),
@@ -31,6 +48,7 @@ final _router = GoRouter(
     GoRoute(path: '/pets',         builder: (context, state) => PetsScreen()),
     GoRoute(path: '/spending',     builder: (context, state) => SpendingScreen()),
     GoRoute(path: '/results',      builder: (context, state) => ResultsScreen()),
+    GoRoute(path: '/login-reminder', builder: (context, state) => LoginReminderScreen()),
     GoRoute(path: '/phase2',       builder: (context, state) => Phase2Screen()),
     GoRoute(path: '/quiz',         builder: (context, state) => QuizScreen()),
     GoRoute(path: '/energyaction', builder: (context, state) => EnergyActionScreen()),
@@ -76,6 +94,167 @@ Widget _placeholder(String title, String next, BuildContext context) {
       ),
     ),
   );
+}
+
+// ── Login/Logout Bar ───────────────────────────
+Widget _authBarButton(BuildContext context) {
+  final user = FirebaseAuth.instance.currentUser;
+  final isLoggedIn = user != null && !user.isAnonymous;
+
+  if (isLoggedIn) {
+    return TextButton(
+      onPressed: () async {
+        await FirebaseAuth.instance.signOut();
+        if (context.mounted) context.go('/auth');
+      },
+      child: Text('Log out', style: TextStyle(color: kTextSubtle)),
+    );
+  } else {
+    return TextButton(
+      onPressed: () => context.go('/login'),
+      child: Text('Log in', style: TextStyle(color: kPrimary, fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+// ── Reusable Quiz Frame ──────────────────────────────────────────────────
+class QuizFrame extends StatefulWidget {
+  final double progress; // 0.0 to 1.0
+  final String question;
+  final Widget answerContent;
+  final bool answered;
+  final VoidCallback onNext;
+  final String backRoute;
+  final String? motivationalMessage;
+
+  const QuizFrame({
+    required this.progress,
+    required this.question,
+    required this.answerContent,
+    required this.answered,
+    required this.onNext,
+    required this.backRoute,
+    this.motivationalMessage,
+  });
+
+  @override
+  _QuizFrameState createState() => _QuizFrameState();
+}
+
+class _QuizFrameState extends State<QuizFrame> {
+  double? _currentCo2;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLiveTotal();
+  }
+
+  Future<void> _fetchLiveTotal() async {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    try {
+      final response = await http.post(
+        Uri.parse('https://netzero-production.up.railway.app/calculate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(profile.toProfile()),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('Full breakdown: ${data['breakdown']}');
+        setState(() => _currentCo2 = (data['total_kg_co2e'] as num).toDouble());
+      }
+    } catch (e) {
+      // Silently fail - the live counter just won't update this time
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go(widget.backRoute),
+        ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Image.asset('assets/images/leaf_icon.png', height: 32),
+                      Row(
+                        children: [
+                          Icon(Icons.eco, color: kPrimary, size: 20),
+                          SizedBox(width: 4),
+                          Text(
+                            _currentCo2 != null ? '${_currentCo2!.toStringAsFixed(0)} kg' : '...',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: widget.progress,
+                      minHeight: 8,
+                      backgroundColor: kBorder,
+                      valueColor: AlwaysStoppedAnimation<Color>(kPrimary),
+                    ),
+                  ),
+                  SizedBox(height: 32),
+                  Text(
+                    widget.question,
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32),
+                  widget.answerContent,
+                  if (widget.motivationalMessage != null) ...[
+                    SizedBox(height: 32),
+                    Text(
+                      widget.motivationalMessage!,
+                      style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  SizedBox(height: 32),
+                  if (widget.answered)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: widget.onNext,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimary,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Next →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Welcome Screen ─────────────────────────────────────────────────────────
@@ -125,7 +304,7 @@ class WelcomeScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => context.go('/info'),
+                    onPressed: () => context.go('/auth'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimary,
                       padding: EdgeInsets.symmetric(vertical: 18),
@@ -149,6 +328,298 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
+// ── Auth Choice Screen ──────────────────────────────────────────────────────
+class AuthChoiceScreen extends StatefulWidget {
+  @override
+  _AuthChoiceScreenState createState() => _AuthChoiceScreenState();
+}
+
+class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
+  bool _checking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  Future<void> _checkExistingSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final profile = Provider.of<ProfileStore>(context, listen: false);
+      await profile.loadFromFirestore();
+      if (mounted) context.go('/info');
+      return;
+    }
+    setState(() => _checking = false);
+  }
+
+  Future<void> _continueAsGuest() async {
+    await FirebaseAuth.instance.signInAnonymously();
+    context.go('/info');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator(color: kPrimary)),
+      );
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/images/leaf_icon.png', height: 64),
+                SizedBox(height: 32),
+                Text(
+                  'My Net Zero Planner',
+                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 48),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/login'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimary,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text('Log In', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _continueAsGuest,
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text(
+                      'Continue without logging in',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kTextSubtle),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Login Screen ────────────────────────────────────────────────────────────
+class LoginScreen extends StatefulWidget {
+  final String redirectTo;
+  const LoginScreen({this.redirectTo = '/info'});
+
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isSignUp = false;
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _submitEmailPassword() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      UserCredential credential;
+
+      if (_isSignUp) {
+        if (currentUser != null && currentUser.isAnonymous) {
+          final authCredential = EmailAuthProvider.credential(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+          credential = await currentUser.linkWithCredential(authCredential);
+        } else {
+          credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+        }
+      } else {
+        credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      }
+
+      if (credential.user != null) {
+        final profile = Provider.of<ProfileStore>(context, listen: false);
+        await profile.loadFromFirestore();
+        if (mounted) context.go(widget.redirectTo);
+      }
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        setState(() => _error = 'Incorrect email or password. If you\'re new here, try creating an account instead.');
+      } else {
+        setState(() => _error = e.message ?? 'Something went wrong. Please try again.');
+      }
+    } catch (e) {
+      setState(() => _error = 'Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      GoogleAuthProvider authProvider = GoogleAuthProvider();
+      final currentUser = FirebaseAuth.instance.currentUser;
+      UserCredential credential;
+
+      if (currentUser != null && currentUser.isAnonymous) {
+        credential = await currentUser.linkWithPopup(authProvider);
+      } else {
+        credential = await FirebaseAuth.instance.signInWithPopup(authProvider);
+      }
+
+      if (credential.user != null) {
+        final profile = Provider.of<ProfileStore>(context, listen: false);
+        await profile.loadFromFirestore();
+        if (mounted) context.go(widget.redirectTo);
+      }
+    } catch (e) {
+      print('Google sign-in error: $e');
+      setState(() => _error = 'Could not sign in with Google. Please try again.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/auth'),
+        ),
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    _isSignUp ? 'Create an account' : 'Log in',
+                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32),
+
+                  Text('Email', style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(hintText: 'you@example.com'),
+                  ),
+                  SizedBox(height: 24),
+
+                  Text('Password', style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(hintText: 'At least 6 characters'),
+                  ),
+                  SizedBox(height: 24),
+
+                  if (_error != null) ...[
+                    Text(_error!, style: TextStyle(color: Colors.red, fontSize: 13), textAlign: TextAlign.center),
+                    SizedBox(height: 16),
+                  ],
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _submitEmailPassword,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kPrimary,
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: _loading
+                          ? SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                          : Text(_isSignUp ? 'Sign Up' : 'Log In', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  TextButton(
+                    onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                    child: Text(
+                      _isSignUp ? 'Already have an account? Log in' : 'New here? Create an account',
+                      style: TextStyle(color: kTextSubtle),
+                    ),
+                  ),
+                  SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: kBorder)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('or', style: TextStyle(color: kTextSubtle)),
+                      ),
+                      Expanded(child: Divider(color: kBorder)),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _loading ? null : _signInWithGoogle,
+                      icon: Icon(Icons.g_mobiledata, size: 28),
+                      label: Text('Continue with Google'),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        side: BorderSide(color: kBorder),
+                        shape: StadiumBorder(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Info Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 class InfoScreen extends StatelessWidget {
   @override
@@ -161,6 +632,10 @@ class InfoScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/welcome'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea( //wraps content to avoid physical device intrusion (e.g camera thing)
         child: SingleChildScrollView(
@@ -366,6 +841,10 @@ class Phase1Screen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/info'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -409,7 +888,7 @@ class Phase1Screen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => context.go('/energy'),
+                    onPressed: () => context.go('/num-people'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimary,
                       padding: EdgeInsets.symmetric(vertical: 18),
@@ -432,6 +911,131 @@ class Phase1Screen extends StatelessWidget {
     );       
   }
 }
+
+// ── Number of People Question ─────────────────────────────────────────────
+class NumPeopleScreen extends StatefulWidget {
+  @override
+  _NumPeopleScreenState createState() => _NumPeopleScreenState();
+}
+
+class _NumPeopleScreenState extends State<NumPeopleScreen> {
+  int? _numPeople;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _numPeople = profile.numPeople;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.01,
+      question: 'How many people live in your household?',
+      answered: _numPeople != null,
+      backRoute: '/num-people',
+      onNext: () {
+        profile.numPeople = _numPeople;
+        profile.update();
+        context.go('/solar');
+      },
+      answerContent: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: () {
+              if (_numPeople != null && _numPeople! > 1) {
+                setState(() => _numPeople = _numPeople! - 1);
+              }
+            },
+            icon: Icon(Icons.remove_circle_outline, color: kPrimary, size: 36),
+          ),
+          SizedBox(width: 24),
+          Text(
+            _numPeople?.toString() ?? '–',
+            style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kText),
+          ),
+          SizedBox(width: 24),
+          IconButton(
+            onPressed: () {
+              setState(() => _numPeople = (_numPeople ?? 0) + 1);
+            },
+            icon: Icon(Icons.add_circle_outline, color: kPrimary, size: 36),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Solar Panels Question ─────────────────────────────────────────────────
+class SolarPanelsScreen extends StatefulWidget {
+  @override
+  _SolarPanelsScreenState createState() => _SolarPanelsScreenState();
+}
+
+class _SolarPanelsScreenState extends State<SolarPanelsScreen> {
+  bool? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.solarPanels;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.02,
+      question: 'Do you have solar panels?',
+      answered: _selected != null,
+      backRoute: '/welcome',
+      onNext: () {
+        profile.solarPanels = _selected!;
+        profile.update();
+        if (_selected == true) {
+          context.go('/solar-usage');
+        } else {
+          context.go('/heating-fuel');
+        }
+      },
+      answerContent: Column(
+        children: [
+          _buildOption(
+            label: 'Yes',
+            icon: Icons.wb_sunny_outlined,
+            value: true,
+          ),
+          Divider(color: kBorder, height: 1),
+          _buildOption(
+            label: 'No',
+            icon: Icons.close,
+            value: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOption({required String label, required IconData icon, required bool value}) {
+    final isSelected = _selected == value;
+    return ListTile(
+      leading: Icon(icon, color: kPrimary),
+      title: Text(label, style: TextStyle(color: kText)),
+      trailing: isSelected ? Icon(Icons.check_circle, color: kPrimary) : null,
+      onTap: () => setState(() => _selected = value),
+      tileColor: isSelected ? kPrimary.withOpacity(0.1) : null,
+    );
+  }
+}
+
+
 
 // ── Energy Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -481,6 +1085,10 @@ class _EnergyScreenState extends State<EnergyScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/phase1'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -801,6 +1409,10 @@ class _TransportScreenState extends State<TransportScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/energy'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -1094,6 +1706,10 @@ class _FlightsScreenState extends State<FlightsScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/transport'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -1618,8 +2234,8 @@ class _DietScreenState extends State<DietScreen> {
   int _rmDays = 0;  
   int _wmDays = 0;
   final _shoppingController = TextEditingController();
-  String _foodWaste = 'compost';
-  String _normalWaste = 'recycle';
+  String _foodWaste;
+  String _normalWaste;
 
   @override
   void initState() {
@@ -1644,6 +2260,10 @@ class _DietScreenState extends State<DietScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/flights'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -1790,7 +2410,7 @@ class _DietScreenState extends State<DietScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: (_foodWaste == null || _normalWaste == null) ? null :() {
                         profile.rmDays = _rmDays;
                         profile.wmDays = _wmDays;
                         profile.nonMeatSpend = double.tryParse(_shoppingController.text) ?? 0;
@@ -1863,6 +2483,10 @@ class _PetsScreenState extends State<PetsScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/diet'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -2114,6 +2738,10 @@ class _SpendingScreenState extends State<SpendingScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/pets'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -2272,7 +2900,7 @@ class HouseholdScreen extends StatefulWidget {
 }
 
 class _HouseholdScreenState extends State<HouseholdScreen> {
-  int _numPeople = 1;
+  int? _numPeople;
 
   @override
   void initState() {
@@ -2293,6 +2921,10 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/spending'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
 
       body: SafeArea(
@@ -2358,7 +2990,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: _numPeople == null ? null : () {
                       profile.numPeople = _numPeople;
                       profile.update();
                       context.go('/results');
@@ -2437,6 +3069,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/household'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -2557,7 +3193,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () => context.go('phase2'),
+            onPressed: () => context.go('/login-reminder'),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 18),
               shape: StadiumBorder(),
@@ -2622,6 +3258,105 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 }
 
+// ── Login Reminder Screen ───────────────────────────────────────────────────
+class LoginReminderScreen extends StatefulWidget {
+  @override
+  _LoginReminderScreenState createState() => _LoginReminderScreenState();
+}
+
+class _LoginReminderScreenState extends State<LoginReminderScreen> {
+  bool _checking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfAlreadyLoggedIn();
+  }
+
+  void _checkIfAlreadyLoggedIn() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && !user.isAnonymous) {
+      context.go('/phase2');
+      return;
+    }
+    setState(() => _checking = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator(color: kPrimary)),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.save_outlined, color: kPrimary, size: 64),
+                SizedBox(height: 32),
+                Text(
+                  'Save your progress',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Create an account so you can pick up where you left off, on any device.',
+                  style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/login?redirect=/phase2'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPrimary,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text('Create an account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => context.go('/phase2'),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      side: BorderSide(color: kBorder),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text(
+                      'Not now',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kTextSubtle),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Phase 2 Screen ─────────────────────────────────────────────────────────
 class Phase2Screen extends StatelessWidget {
   @override
@@ -2634,6 +3369,10 @@ class Phase2Screen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/results'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -2713,6 +3452,10 @@ class QuizScreen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/phase2'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -2814,6 +3557,10 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/quiz'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -2952,6 +3699,10 @@ class _HomeInfoScreenState extends State<HomeInfoScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/energyaction'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -3183,6 +3934,10 @@ class _InsulationScreenState extends State<InsulationScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/homeinfo'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -3349,6 +4104,10 @@ class _HabitScreenState extends State<HabitScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/insulation'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -3495,6 +4254,10 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/habit'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -3573,6 +4336,10 @@ class Phase3Screen extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/homeowner'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
@@ -3710,6 +4477,10 @@ class _ActionScreenState extends State<ActionScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/phase3'),
         ),
+        actions: [
+          _authBarButton(context),
+          SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: screenWrapper(
