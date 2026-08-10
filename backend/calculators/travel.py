@@ -76,16 +76,19 @@ def calculate_abroad_accomodation_emissions(flights: list) -> float:
     return total_co2
 
 # ── UK Accommodation emissions ──────────────────────────────────────────────────
-def calculate_uk_accomodation_emissions(trip: list) -> float:
-    total_co2 = 0
-    for stay in trip:
-        people = stay["people"]
-        nights = stay["nights"]
-        lodging = stay ["type"]
-        factor = ACCOMMODATION_FACTORS.get(lodging)    
-        if factor is None:
-            raise ValueError(f"Unknown accomodation type: '{type}'. ")
-    
-        co2 = nights * factor * people
-        total_co2 += co2
-    return total_co2
+def calculate_uk_accomodation_emissions(hotel_nights: float, airbnb_nights: float, num_people: int) -> float:
+    if num_people is None:
+        return 0
+
+    hotel_factor = ACCOMMODATION_FACTORS.get('hotel')
+    if hotel_factor is None:
+        raise ValueError("Unknown accommodation type: 'hotel'")
+
+    airbnb_factor = ACCOMMODATION_FACTORS.get('airbnb')
+    if airbnb_factor is None:
+        raise ValueError("Unknown accommodation type: 'airbnb'")
+
+    hotel_co2 = hotel_nights * hotel_factor * num_people
+    airbnb_co2 = airbnb_nights * airbnb_factor * num_people
+
+    return hotel_co2 + airbnb_co2

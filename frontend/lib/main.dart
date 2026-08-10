@@ -9,6 +9,14 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_earth_globe/flutter_earth_globe.dart';
+import 'package:flutter_earth_globe/flutter_earth_globe_controller.dart';
+import 'package:flutter_earth_globe/point.dart';
+import 'package:flutter_earth_globe/globe_coordinates.dart';
+import 'package:flutter_globe_3d/flutter_globe_3d.dart';
+import 'dart:math';
+
+const bool kUnderConstruction = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +34,18 @@ void main() async {
 // ── Router ──────────────────────────────────────────────
 final _router = GoRouter(
   initialLocation: '/welcome',
+  observers: [Earth3D.routeObserver],
+  redirect: (context, state) {
+    final bypassKey = state.uri.queryParameters['preview'];
+    final isDeveloper = bypassKey == 'letmein123';
+
+    if (kUnderConstruction && !isDeveloper && state.matchedLocation != '/maintenance') {
+      return '/maintenance';
+    }
+    return null;
+  },
   routes: [
+    GoRoute(path: '/maintenance', builder: (context, state) => UnderConstructionScreen()), 
     GoRoute(path: '/auth', builder: (context, state) => AuthChoiceScreen()),
     GoRoute(
       path: '/login',
@@ -37,13 +56,32 @@ final _router = GoRouter(
     ),    
     GoRoute(path: '/welcome',      builder: (context, state) => WelcomeScreen()),
     GoRoute(path: '/info',         builder: (context, state) => InfoScreen()),
-    GoRoute(path: '/phase1',       builder: (context, state) => Phase1Screen()),
+    GoRoute(path: '/energy-intro', builder: (context, state) => EnergyIntroScreen()),
     GoRoute(path: '/num-people', builder: (context, state) => NumPeopleScreen()),
     GoRoute(path: '/solar', builder: (context, state) => SolarPanelsScreen()),
+    GoRoute(path: '/solar-usage', builder: (context, state) => SolarUsageScreen()),
+    GoRoute(path: '/heating-fuel', builder: (context, state) => HeatingFuelScreen()),
+    GoRoute(path: '/hob-type', builder: (context, state) => HobTypeScreen()),
+    GoRoute(path: '/combined-billing', builder: (context, state) => CombinedBillingScreen()),
+    GoRoute(path: '/gas-elec-spend', builder: (context, state) => CombinedSpendScreen()),
+    GoRoute(path: '/gas-spend', builder: (context, state) => GasSpendScreen()),
+    GoRoute(path: '/elec-spend', builder: (context, state) => ElecSpendScreen()),
+    GoRoute(path: '/water-spend', builder: (context, state) => WaterSpendScreen()),
+    GoRoute(path: '/tariff-type', builder: (context, state) => TariffTypeScreen()),
+    GoRoute(path: '/transport-intro', builder: (context, state) => TransportIntroScreen()),
+    GoRoute(path: '/car-size', builder: (context, state) => CarSizeScreen()),
+    GoRoute(path: '/car-fuel', builder: (context, state) => CarFuelScreen()),
+    GoRoute(path: '/weekly-mileage', builder: (context, state) => WeeklyMileageScreen()),
+    GoRoute(path: '/bus-spend', builder: (context, state) => BusSpendScreen()),
+    GoRoute(path: '/train-spend', builder: (context, state) => TrainSpendScreen()),
+    GoRoute(path: '/flights-intro', builder: (context, state) => FlightsIntroScreen()),
+    GoRoute(path: '/flights-question', builder: (context, state) => FlightsGlobeScreen()),
+    GoRoute(path: '/uk-intro', builder: (context, state) => UKIntroScreen()),
+    GoRoute(path: '/hotel-nights', builder: (context, state) => HotelNightsScreen()),
+    GoRoute(path: '/airbnb-nights', builder: (context, state) => AirbnbNightsScreen()),
+    GoRoute(path: '/pets-intro', builder: (context, state) => PetsIntroScreen()),
+    GoRoute(path: '/pets-question', builder: (context, state) => PetsQuestionScreen()),
     GoRoute(path: '/household',    builder: (context, state) => HouseholdScreen()),
-    GoRoute(path: '/energy',       builder: (context, state) => EnergyScreen()),
-    GoRoute(path: '/transport',    builder: (context, state) => TransportScreen()),
-    GoRoute(path: '/flights',      builder: (context, state) => FlightsScreen()),
     GoRoute(path: '/diet',         builder: (context, state) => DietScreen()),
     GoRoute(path: '/pets',         builder: (context, state) => PetsScreen()),
     GoRoute(path: '/spending',     builder: (context, state) => SpendingScreen()),
@@ -60,6 +98,10 @@ final _router = GoRouter(
     GoRoute(path: '/actions',      builder: (context, state) => ActionScreen()),
   ],
 );
+
+// ── Icons ─────────────────────────────────────────────────
+// --- Ligtning Bolt -----------------------------------------
+
 
 // ── App ─────────────────────────────────────────────────
 class NetZeroApp extends StatelessWidget {
@@ -97,7 +139,7 @@ Widget _placeholder(String title, String next, BuildContext context) {
 }
 
 // ── Login/Logout Bar ───────────────────────────
-Widget _authBarButton(BuildContext context) {
+Widget _authBarButton(BuildContext context, {Color accentColor = kPrimary}) {
   final user = FirebaseAuth.instance.currentUser;
   final isLoggedIn = user != null && !user.isAnonymous;
 
@@ -112,9 +154,470 @@ Widget _authBarButton(BuildContext context) {
   } else {
     return TextButton(
       onPressed: () => context.go('/login'),
-      child: Text('Log in', style: TextStyle(color: kPrimary, fontWeight: FontWeight.bold)),
+      child: Text('Log in', style: TextStyle(color: accentColor, fontWeight: FontWeight.bold)),
     );
   }
+}
+
+// ── Country Co-ordinates ───────────────────────────
+const Map<String, List<double>> countryCoordinates = {
+  'Afghanistan': [33.0, 66.0],
+  'Albania': [41.0, 20.0],
+  'Algeria': [28.0, 3.0],
+  'American Samoa': [-14.270972, -170.132217],
+  'Angola': [-12.5, 18.5],
+  'Anguilla': [18.220554, -63.068615],
+  'Antigua and Barbuda': [17.05, -61.8],
+  'Argentina': [-34.0, -64.0],
+  'Armenia': [40.0, 45.0],
+  'Aruba': [12.52111, -69.968338],
+  'Ascension Island': [-7.9467, -14.3559],
+  'Australia': [-25.0, 135.0],
+  'Austria': [47.333333, 13.333333],
+  'Azerbaijan': [40.5, 47.5],
+  'Bahamas': [24.0, -76.0],
+  'Bahrain': [26.0, 50.5],
+  'Bangladesh': [24.0, 90.0],
+  'Barbados': [13.166667, -59.533333],
+  'Belarus': [53.0, 28.0],
+  'Belgium': [50.833333, 4.0],
+  'Belize': [17.25, -88.75],
+  'Benin': [9.5, 2.25],
+  'Bermuda': [32.321384, -64.75737],
+  'Bolivia': [-17.0, -65.0],
+  'Bosnia-Herzegovina': [44.25, 17.833333],
+  'Botswana': [-22.0, 24.0],
+  'Brazil': [-10.0, -55.0],
+  'British Virgin Islands': [18.4207, -64.64],
+  'Brunei': [4.5, 114.666667],
+  'Bulgaria': [43.0, 25.0],
+  'Burkina Faso': [13.0, -2.0],
+  'Burundi': [-3.5, 30.0],
+  'Cambodia': [13.0, 105.0],
+  'Cameroon': [6.0, 12.0],
+  'Canada': [60.0, -96.0],
+  'Cape Verde': [16.0, -24.0],
+  'Cayman Islands': [19.513469, -80.566956],
+  'Central African Republic': [7.0, 21.0],
+  'Chad': [15.0, 19.0],
+  'Chile': [-30.0, -71.0],
+  'China': [35.0, 105.0],
+  'Colombia': [4.0, -72.0],
+  'Comoros': [-12.166667, 44.25],
+  'Congo-Brazzaville': [-1.0, 15.0],
+  'Cook Islands': [-21.236736, -159.777671],
+  'Costa Rica': [10.0, -84.0],
+  'Croatia': [45.166667, 15.5],
+  'Cuba': [22.0, -79.5],
+  'Curacao': [12.1696, -68.99],
+  'Cyprus': [35.0, 33.0],
+  'Czech Republic': [49.75, 15.0],
+  'Denmark': [56.0, 10.0],
+  'Djibouti': [11.5, 42.5],
+  'Dominica': [15.5, -61.333333],
+  'Dominican Republic': [19.0, -70.666667],
+  'DR Congo': [0.0, 25.0],
+  'Ecuador': [-2.0, -77.5],
+  'Egypt': [27.0, 30.0],
+  'El Salvador': [13.833333, -88.916667],
+  'Equatorial Guinea': [2.0, 10.0],
+  'Eritrea': [15.0, 39.0],
+  'Estonia': [59.0, 26.0],
+  'Ethiopia': [8.0, 38.0],
+  'Falkland Islands': [-51.796253, -59.523613],
+  'Faroe Islands': [61.892635, -6.911806],
+  'Fiji': [-18.0, 178.0],
+  'Finland': [64.0, 26.0],
+  'France': [46.0, 2.0],
+  'French Guiana': [3.933889, -53.125782],
+  'Gabon': [-1.0, 11.75],
+  'Gambia': [13.5, -15.5],
+  'Georgia': [41.999981, 43.499905],
+  'Germany': [51.5, 10.5],
+  'Ghana': [8.0, -2.0],
+  'Gibraltar': [36.137741, -5.345374],
+  'Greece': [39.0, 22.0],
+  'Greenland': [71.706936, -42.604303],
+  'Grenada': [12.116667, -61.666667],
+  'Guadeloupe': [16.995971, -62.067641],
+  'Guam': [13.444304, 144.793731],
+  'Guatemala': [15.5, -90.25],
+  'Guernsey': [49.465691, -2.585278],
+  'Guinea': [11.0, -10.0],
+  'Guinea-Bissau': [12.0, -15.0],
+  'Guyana': [5.0, -59.0],
+  'Haiti': [19.0, -72.416667],
+  'Honduras': [15.0, -86.5],
+  'Hong Kong': [22.396428, 114.109497],
+  'Hungary': [47.0, 20.0],
+  'Iceland': [65.0, -18.0],
+  'India': [20.0, 77.0],
+  'Indonesia': [-5.0, 120.0],
+  'Iran': [32.0, 53.0],
+  'Iraq': [33.0, 44.0],
+  'Ireland': [53.0, -8.0],
+  'Isle Of Man': [54.236107, -4.548056],
+  'Israel': [31.5, 34.75],
+  'Italy': [42.833333, 12.833333],
+  'Ivory Coast': [8.0, -5.0],
+  'Jamaica': [18.25, -77.5],
+  'Japan': [36.0, 138.0],
+  'Jersey': [49.214439, -2.13125],
+  'Jordan': [31.0, 36.0],
+  'Kazakhstan': [48.0, 68.0],
+  'Kenya': [1.0, 38.0],
+  'Kosovo': [42.6026, 20.903],
+  'Kuwait': [29.5, 47.75],
+  'Kyrgyzstan': [41.0, 75.0],
+  'Laos': [18.0, 105.0],
+  'Latvia': [57.0, 25.0],
+  'Lebanon': [33.833333, 35.833333],
+  'Lesotho': [-29.5, 28.25],
+  'Liberia': [6.5, -9.5],
+  'Libya': [25.0, 17.0],
+  'Lithuania': [56.0, 24.0],
+  'Luxembourg': [49.75, 6.166667],
+  'Macao': [22.1987, 113.5439],
+  'Macedonia': [41.833333, 22.0],
+  'Madagascar': [-20.0, 47.0],
+  'Malawi': [-13.5, 34.0],
+  'Malaysia': [2.5, 112.5],
+  'Maldives': [3.2, 73.0],
+  'Mali': [17.0, -4.0],
+  'Malta': [35.916667, 14.433333],
+  'Marshall Islands': [10.0, 167.0],
+  'Martinique': [14.6415, -61.0242],
+  'Mauritania': [20.0, -12.0],
+  'Mauritius': [-20.3, 57.583333],
+  'Mexico': [23.0, -102.0],
+  'Moldova': [47.0, 29.0],
+  'Mongolia': [46.0, 105.0],
+  'Montenegro': [42.5, 19.3],
+  'Morocco': [32.0, -5.0],
+  'Mozambique': [-18.25, 35.0],
+  'Myanmar': [22.0, 98.0],
+  'Namibia': [-22.0, 17.0],
+  'Nepal': [28.0, 84.0],
+  'Netherlands': [52.5, 5.75],
+  'New Caledonia': [-20.9043, 165.618],
+  'New Zealand': [-42.0, 174.0],
+  'Nicaragua': [13.0, -85.0],
+  'Niger': [16.0, 8.0],
+  'Nigeria': [10.0, 8.0],
+  'North Korea': [40.0, 127.0],
+  'Norway': [62.0, 10.0],
+  'Oman': [21.0, 57.0],
+  'Pakistan': [30.0, 70.0],
+  'Palau': [6.0, 134.0],
+  'Panama': [9.0, -80.0],
+  'Papua New Guinea': [-6.0, 147.0],
+  'Paraguay': [-22.993333, -57.996389],
+  'Peru': [-10.0, -76.0],
+  'Philippines': [13.0, 122.0],
+  'Poland': [52.0, 20.0],
+  'Portugal': [39.5, -8.0],
+  'Puerto Rico': [18.2208, -66.5901],
+  'Qatar': [25.5, 51.25],
+  'Reunion': [-21.1151, 55.5364],
+  'Romania': [46.0, 25.0],
+  'Russia': [60.0, 100.0],
+  'Rwanda': [-2.0, 30.0],
+  'Sao Tome Islands': [1.0, 7.0],
+  'Saudi Arabia': [25.0, 45.0],
+  'Senegal': [14.0, -14.0],
+  'Serbia': [44.0, 21.0],
+  'Seychelles': [-4.583333, 55.666667],
+  'Sierra Leone': [8.5, -11.5],
+  'Singapore': [1.366667, 103.8],
+  'Slovak Republic': [48.666667, 19.5],
+  'Slovenia': [46.25, 15.166667],
+  'Solomon Islands': [-8.0, 159.0],
+  'Somali Republic': [6.0, 48.0],
+  'South Africa': [-30.0, 26.0],
+  'South Korea': [37.0, 127.5],
+  'South Sudan': [8.0, 30.0],
+  'Spain': [40.0, -4.0],
+  'Sri Lanka': [7.0, 81.0],
+  'St Kitts and Nevis': [17.333333, -62.75],
+  'St Lucia': [13.883333, -60.966667],
+  'St Vincent and the Grenadines': [13.083333, -61.2],
+  'Sudan': [16.0, 30.0],
+  'Surinam': [4.0, -56.0],
+  'Swaziland': [-26.5, 31.5],
+  'Sweden': [62.0, 15.0],
+  'Switzerland': [47.0, 8.0],
+  'Syria': [35.0, 38.0],
+  'Tahiti': [-17.6797, -149.4068],
+  'Taiwan': [23.6978, 120.9605],
+  'Tajikistan': [39.0, 71.0],
+  'Tanzania': [-6.0, 35.0],
+  'Thailand': [15.0, 100.0],
+  'Timor': [-8.833333, 125.75],
+  'Togo': [8.0, 1.166667],
+  'Tonga': [-20.0, -175.0],
+  'Trinidad and Tobago': [11.0, -61.0],
+  'Tunisia': [34.0, 9.0],
+  'Turkey': [39.059012, 34.911546],
+  'Turkmenistan': [40.0, 60.0],
+  'Turks and Caicos Islands': [21.694, -71.7979],
+  'Uganda': [2.0, 33.0],
+  'Ukraine': [49.0, 32.0],
+  'United Arab Emirates': [24.0, 54.0],
+  'United Kingdom': [54.0, -4.0],
+  'United States': [39.828175, -98.5795],
+  'Uruguay': [-33.0, -56.0],
+  'Uzbekistan': [41.707542, 63.84911],
+  'Vanuatu': [-16.0, 167.0],
+  'Venezuela': [8.0, -66.0],
+  'Vietnam': [16.166667, 107.833333],
+  'Virgin Islands (U.S.A)': [18.3358, -64.8963],
+  'Wake Islands': [19.2823, 166.6470],
+  'Western Sahara': [24.215527, -12.885834],
+  'Yemen': [15.5, 47.5],
+  'Zambia': [-15.0, 30.0],
+  'Zimbabwe': [-19.0, 29.0],
+};
+
+// ── Distance Calculation ───────────────────────────
+double _distanceBetween(double lat1, double lon1, double lat2, double lon2) {
+  const earthRadiusKm = 6371.0;
+  final dLat = _degToRad(lat2 - lat1);
+  final dLon = _degToRad(lon2 - lon1);
+  final a = sin(dLat / 2) * sin(dLat / 2) +
+      cos(_degToRad(lat1)) * cos(_degToRad(lat2)) *
+      sin(dLon / 2) * sin(dLon / 2);
+  final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  return earthRadiusKm * c;
+}
+
+double _degToRad(double deg) => deg * (pi / 180);
+
+List<String> findNearbyCountries(double tapLat, double tapLon, {double radiusKm = 3000}) {
+  final nearby = <String>[];
+  countryCoordinates.forEach((country, coords) {
+    final distance = _distanceBetween(tapLat, tapLon, coords[0], coords[1]);
+    if (distance <= radiusKm) {
+      nearby.add(country);
+    }
+  });
+  nearby.sort();
+  return nearby;
+}
+
+// ── Anchor Markers ───────────────────────────
+const List<Map<String, dynamic>> globeRegions = [
+  {'id': 'w_europe', 'lat': 48.0, 'lon': 5.0},
+  {'id': 'e_europe', 'lat': 50.0, 'lon': 25.0},
+  {'id': 'n_africa', 'lat': 25.0, 'lon': 15.0},
+  {'id': 'w_africa', 'lat': 10.0, 'lon': -5.0},
+  {'id': 'e_africa', 'lat': -2.0, 'lon': 35.0},
+  {'id': 's_africa', 'lat': -25.0, 'lon': 25.0},
+  {'id': 'middle_east', 'lat': 27.0, 'lon': 45.0},
+  {'id': 'central_asia', 'lat': 42.0, 'lon': 65.0},
+  {'id': 's_asia', 'lat': 22.0, 'lon': 80.0},
+  {'id': 'se_asia', 'lat': 10.0, 'lon': 105.0},
+  {'id': 'e_asia', 'lat': 35.0, 'lon': 105.0},
+  {'id': 'n_america', 'lat': 45.0, 'lon': -100.0},
+  {'id': 'central_america', 'lat': 15.0, 'lon': -85.0},
+  {'id': 'caribbean', 'lat': 18.0, 'lon': -65.0},
+  {'id': 'n_south_america', 'lat': 5.0, 'lon': -65.0},
+  {'id': 's_south_america', 'lat': -30.0, 'lon': -65.0},
+  {'id': 'oceania', 'lat': -25.0, 'lon': 140.0},
+  {'id': 'pacific_islands', 'lat': -15.0, 'lon': -175.0},
+];
+
+// ── Standardised Questions ───────────────────────────
+// ── Yes/No ───────────────────────────
+Widget buildYesNoOptions({
+  required bool? selected,
+  required void Function(bool) onSelect,
+  String leftLabel = 'Yes',
+  IconData leftIcon = Icons.check_circle_outline,
+  String? leftSubtitle,
+  String rightLabel = 'No',
+  IconData rightIcon = Icons.cancel_outlined,
+  String? rightSubtitle,
+}) {
+  final hasSubtitles = leftSubtitle != null || rightSubtitle != null;
+  return Row(
+    children: [
+      Expanded(
+        child: GestureDetector(
+          onTap: () => onSelect(true),
+          child: Container(
+            constraints: BoxConstraints(minHeight: hasSubtitles ? 170 : 120),
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: selected == true ? kPrimary.withOpacity(0.15) : kSurface,
+              border: Border.all(
+                color: selected == true ? kPrimary : kBorder,
+                width: selected == true ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(leftIcon, color: kPrimary, size: 32),
+                SizedBox(height: 8),
+                Text(leftLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText), textAlign: TextAlign.center),
+                if (leftSubtitle != null) ...[
+                  SizedBox(height: 8),
+                  Text(leftSubtitle, style: TextStyle(fontSize: 12, color: kTextSubtle), textAlign: TextAlign.center),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      SizedBox(width: 16),
+      Expanded(
+        child: GestureDetector(
+          onTap: () => onSelect(false),
+          child: Container(
+            constraints: BoxConstraints(minHeight: hasSubtitles ? 170 : 120),
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: selected == false ? kPrimary.withOpacity(0.15) : kSurface,
+              border: Border.all(
+                color: selected == false ? kPrimary : kBorder,
+                width: selected == false ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(rightIcon, color: kTextSubtle, size: 32),
+                SizedBox(height: 8),
+                Text(rightLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText), textAlign: TextAlign.center),
+                if (rightSubtitle != null) ...[
+                  SizedBox(height: 8),
+                  Text(rightSubtitle, style: TextStyle(fontSize: 12, color: kTextSubtle), textAlign: TextAlign.center),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+// ── Single Select List ───────────────────────────
+Widget buildSingleSelectOptions({
+  required List<Map<String, dynamic>> options,
+  required String? selected,
+  required void Function(String) onSelect,
+  Color accentColor = kPrimary,
+}) {
+  return Column(
+    children: options.map((opt) {
+      final isSelected = selected == opt['value'];
+      return Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: GestureDetector(
+          onTap: () => onSelect(opt['value'] as String),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isSelected ? accentColor.withOpacity(0.1) : kSurface,
+              border: Border.all(color: isSelected ? accentColor : kBorder, width: isSelected ? 2 : 1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (opt['icon'] != null) ...[
+                  Icon(opt['icon'] as IconData, color: accentColor),
+                  SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(opt['label'] as String, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText)),
+                      if (opt['subtitle'] != null) ...[
+                        SizedBox(height: 2),
+                        Text(opt['subtitle'] as String, style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                      ],
+                    ],
+                  ),
+                ),
+                if (isSelected) Icon(Icons.check_circle, color: accentColor),
+              ],
+            ),
+          ),
+        ),
+      );
+    }).toList(),
+  );
+}
+
+// ── Two Options ───────────────────────────
+Widget buildTwoOptionBoxes({
+  required String? selected,
+  required void Function(String) onSelect,
+  required String leftValue,
+  required String leftLabel,
+  required IconData leftIcon,
+  required String rightValue,
+  required String rightLabel,
+  required IconData rightIcon,
+}) {
+  return Row(
+    children: [
+      Expanded(
+        child: GestureDetector(
+          onTap: () => onSelect(leftValue),
+          child: Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: selected == leftValue ? kPrimary.withOpacity(0.15) : kSurface,
+              border: Border.all(
+                color: selected == leftValue ? kPrimary : kBorder,
+                width: selected == leftValue ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(leftIcon, color: kPrimary, size: 32),
+                SizedBox(height: 8),
+                Text(leftLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      ),
+      SizedBox(width: 16),
+      Expanded(
+        child: GestureDetector(
+          onTap: () => onSelect(rightValue),
+          child: Container(
+            height: 120,
+            decoration: BoxDecoration(
+              color: selected == rightValue ? kPrimary.withOpacity(0.15) : kSurface,
+              border: Border.all(
+                color: selected == rightValue ? kPrimary : kBorder,
+                width: selected == rightValue ? 2 : 1,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(rightIcon, color: kPrimary, size: 32),
+                SizedBox(height: 8),
+                Text(rightLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText), textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 // ── Reusable Quiz Frame ──────────────────────────────────────────────────
@@ -126,6 +629,7 @@ class QuizFrame extends StatefulWidget {
   final VoidCallback onNext;
   final String backRoute;
   final String? motivationalMessage;
+  final Color accentColor;
 
   const QuizFrame({
     required this.progress,
@@ -135,6 +639,7 @@ class QuizFrame extends StatefulWidget {
     required this.onNext,
     required this.backRoute,
     this.motivationalMessage,
+    this.accentColor = kPrimary,
   });
 
   @override
@@ -179,76 +684,291 @@ class _QuizFrameState extends State<QuizFrame> {
           onPressed: () => context.go(widget.backRoute),
         ),
         actions: [
-          _authBarButton(context),
+          _authBarButton(context, accentColor: widget.accentColor),
           SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
         child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Image.asset('assets/images/leaf_icon.png', height: 32),
-                      Row(
-                        children: [
-                          Icon(Icons.eco, color: kPrimary, size: 20),
-                          SizedBox(width: 4),
-                          Text(
-                            _currentCo2 != null ? '${_currentCo2!.toStringAsFixed(0)} kg' : '...',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: widget.progress,
-                      minHeight: 8,
-                      backgroundColor: kBorder,
-                      valueColor: AlwaysStoppedAnimation<Color>(kPrimary),
-                    ),
-                  ),
-                  SizedBox(height: 32),
-                  Text(
-                    widget.question,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-                  widget.answerContent,
-                  if (widget.motivationalMessage != null) ...[
-                    SizedBox(height: 32),
-                    Text(
-                      widget.motivationalMessage!,
-                      style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
-                      textAlign: TextAlign.center,
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Image.asset('assets/images/leaf_icon.png', height: 32),
+                    Row(
+                      children: [
+                        Icon(Icons.eco, color: kPrimary, size: 20),
+                        SizedBox(width: 4),
+                        Text(
+                          _currentCo2 != null ? '${_currentCo2!.toStringAsFixed(0)} kgCO₂' : '...',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText),
+                        ),
+                      ],
                     ),
                   ],
+                ),
+                SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: widget.progress,
+                    minHeight: 8,
+                    backgroundColor: kBorder,
+                    valueColor: AlwaysStoppedAnimation<Color>(widget.accentColor),
+                  ),
+                ),
+                SizedBox(height: 32),
+                Text(
+                  widget.question,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center,
+                ),
+                Spacer(flex: 2),
+                widget.answerContent,
+                if (widget.motivationalMessage != null) ...[
                   SizedBox(height: 32),
-                  if (widget.answered)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: widget.onNext,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimary,
-                          padding: EdgeInsets.symmetric(vertical: 18),
-                          shape: StadiumBorder(),
-                        ),
-                        child: Text('Next →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
+                  Text(
+                    widget.motivationalMessage!,
+                    style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
+                Spacer(flex: 3),
+                if (widget.answered)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: widget.onNext,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.accentColor,
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text('Next →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                  )
+                else
+                  SizedBox(height: 54),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Hover Reveal ───────────────────────────
+class HoverRevealField extends StatefulWidget {
+  final String displayValue;
+  final Widget Function(BuildContext context) editorBuilder;
+
+  const HoverRevealField({required this.displayValue, required this.editorBuilder});
+
+  @override
+  _HoverRevealFieldState createState() => _HoverRevealFieldState();
+}
+
+class _HoverRevealFieldState extends State<HoverRevealField> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: _hovering
+          ? Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                border: Border.all(color: kPetsPurple),
+                borderRadius: BorderRadius.circular(6),
               ),
+              child: widget.editorBuilder(context),
+            )
+          : Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              child: Text(
+                widget.displayValue.isEmpty ? '—' : widget.displayValue,
+                style: TextStyle(color: kText),
+              ),
+            ),
+    );
+  }
+}
+
+// ── Pet Card ───────────────────────────
+class PetCard extends StatefulWidget {
+  final Map<String, dynamic> pet;
+  final void Function(Map<String, dynamic>) onChanged;
+  final VoidCallback onRemove;
+
+  const PetCard({required this.pet, required this.onChanged, required this.onRemove});
+
+  @override
+  _PetCardState createState() => _PetCardState();
+}
+
+class _PetCardState extends State<PetCard> {
+  late TextEditingController _nameController;
+  late TextEditingController _weightController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.pet['name'] ?? '');
+    _weightController = TextEditingController(text: widget.pet['weight']?.toString() ?? '');
+  }
+
+  void _update(String key, dynamic value) {
+    final updated = Map<String, dynamic>.from(widget.pet);
+    updated[key] = value;
+    widget.onChanged(updated);
+  }
+
+  Widget _row(String label, Widget field) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(width: 70, child: Text('$label:', style: TextStyle(fontWeight: FontWeight.bold, color: kText))),
+          Expanded(child: field),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pet = widget.pet;
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: kSurface,
+        border: Border.all(color: kPetsPurple, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(pet['type'] == 'dog' ? Icons.pets : Icons.pets, color: kPetsPurple),
+              SizedBox(width: 8),
+              Text(pet['type'] == 'dog' ? 'Dog' : 'Cat', style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
+              Spacer(),
+              IconButton(
+                icon: Icon(Icons.close, color: kTextSubtle, size: 20),
+                onPressed: widget.onRemove,
+              ),
+            ],
+          ),
+          Divider(color: kBorder),
+          _row(
+            'Name',
+            HoverRevealField(
+              displayValue: pet['name'] ?? '',
+              editorBuilder: (context) => TextField(
+                controller: _nameController,
+                style: TextStyle(color: kText),
+                decoration: InputDecoration(border: InputBorder.none, isDense: true),
+                onChanged: (value) => _update('name', value),
+              ),
+            ),
+          ),
+          _row(
+            'Food',
+            HoverRevealField(
+              displayValue: pet['food'] ?? '',
+              editorBuilder: (context) => DropdownButton<String>(
+                value: pet['food'],
+                isExpanded: true,
+                underline: SizedBox(),
+                hint: Text('Select'),
+                items: ['dry', 'wet'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (value) => _update('food', value),
+              ),
+            ),
+          ),
+          _row(
+            'Brand',
+            HoverRevealField(
+              displayValue: pet['brand'] ?? '',
+              editorBuilder: (context) => DropdownButton<String>(
+                value: pet['brand'],
+                isExpanded: true,
+                underline: SizedBox(),
+                hint: Text('Select'),
+                items: ['standard', 'premium'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (value) => _update('brand', value),
+              ),
+            ),
+          ),
+          _row(
+            'Diet',
+            HoverRevealField(
+              displayValue: pet['diet'] ?? '',
+              editorBuilder: (context) => DropdownButton<String>(
+                value: pet['diet'],
+                isExpanded: true,
+                underline: SizedBox(),
+                hint: Text('Select'),
+                items: ['meaty', 'vegetarian'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (value) => _update('diet', value),
+              ),
+            ),
+          ),
+          _row(
+            'Weight',
+            HoverRevealField(
+              displayValue: pet['weight'] != null ? '${pet['weight']} kg' : '',
+              editorBuilder: (context) => TextField(
+                controller: _weightController,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: kText),
+                decoration: InputDecoration(border: InputBorder.none, isDense: true),
+                onChanged: (value) => _update('weight', double.tryParse(value) ?? 0),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Under Construction Screen ─────────────────────────────────────────────
+class UnderConstructionScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/images/leaf_icon.png', height: 64),
+                SizedBox(height: 24),
+                Text(
+                  'We\'ll be right back',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'My Net Zero Planner is currently getting a fresh coat of paint. Please check back soon!',
+                  style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),
@@ -435,6 +1155,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _error;
 
+
   Future<void> _submitEmailPassword() async {
     setState(() {
       _loading = true;
@@ -510,6 +1231,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -804,7 +1526,7 @@ class InfoScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => context.go('/phase1'),
+                      onPressed: () => context.go('/energy-intro'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: kPrimary,
                         padding: EdgeInsets.symmetric(vertical: 18),
@@ -829,8 +1551,8 @@ class InfoScreen extends StatelessWidget {
   }
 }
 
-// ── Phase 1 Screen ─────────────────────────────────────────────────────────
-class Phase1Screen extends StatelessWidget {
+// ── Energy Section Intro ────────────────────────────────────────────────
+class EnergyIntroScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -848,67 +1570,57 @@ class Phase1Screen extends StatelessWidget {
       ),
       body: SafeArea(
         child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                // Logo/icon
-                Image.asset(
-                  'assets/images/leaf_icon.png',
-                  height: 64,
-                ),
-                SizedBox(height: 32),
-
-                // Title
-                Text(
-                  'Phase 1',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    height: 1.1,
+          child: Stack(
+            children: [
+              Positioned(
+                top: 60,
+                right: 24,
+                child: Transform.rotate(
+                  angle: -0.6,
+                  child: Image.asset(
+                    'assets/images/bolt_icon.png',
+                    height: 110,
+                    color: kPrimary,
                   ),
                 ),
-                SizedBox(height: 16),
-
-                // Subtitle
-                Text(
-                  'Carbon dioxide emissions calculation',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: kTextSubtle,
-                    height: 1.5,
-                  ),
-                ),
-                SizedBox(height: 48),
-
-                // Start button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/num-people'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimary,
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              ),
+              Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Energy',
+                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'About your home\'s energy use',
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/num-people'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimary,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Let\'s Go →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    child: Text(
-                      'Get Started',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  ],
                 ),
-                SizedBox(height: 16),
-              ],
-            ),
+              ),
+            ],
           ),
-        ),   
-      ),     
-    );       
+        ),
+      ),
+    );
   }
 }
 
@@ -936,7 +1648,7 @@ class _NumPeopleScreenState extends State<NumPeopleScreen> {
       progress: 0.01,
       question: 'How many people live in your household?',
       answered: _numPeople != null,
-      backRoute: '/num-people',
+      backRoute: '/energy-intro',
       onNext: () {
         profile.numPeople = _numPeople;
         profile.update();
@@ -984,7 +1696,7 @@ class _SolarPanelsScreenState extends State<SolarPanelsScreen> {
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _selected = profile.solarPanels;
+    _selected = profile.solarPanelsAnswered ? profile.solarPanels : null; 
   }
 
   @override
@@ -995,9 +1707,10 @@ class _SolarPanelsScreenState extends State<SolarPanelsScreen> {
       progress: 0.02,
       question: 'Do you have solar panels?',
       answered: _selected != null,
-      backRoute: '/welcome',
+      backRoute: '/num-people',
       onNext: () {
         profile.solarPanels = _selected!;
+        profile.solarPanelsAnswered = true;
         profile.update();
         if (_selected == true) {
           context.go('/solar-usage');
@@ -1005,1219 +1718,2028 @@ class _SolarPanelsScreenState extends State<SolarPanelsScreen> {
           context.go('/heating-fuel');
         }
       },
-      answerContent: Column(
-        children: [
-          _buildOption(
-            label: 'Yes',
-            icon: Icons.wb_sunny_outlined,
-            value: true,
-          ),
-          Divider(color: kBorder, height: 1),
-          _buildOption(
-            label: 'No',
-            icon: Icons.close,
-            value: false,
-          ),
-        ],
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
       ),
     );
   }
-
-  Widget _buildOption({required String label, required IconData icon, required bool value}) {
-    final isSelected = _selected == value;
-    return ListTile(
-      leading: Icon(icon, color: kPrimary),
-      title: Text(label, style: TextStyle(color: kText)),
-      trailing: isSelected ? Icon(Icons.check_circle, color: kPrimary) : null,
-      onTap: () => setState(() => _selected = value),
-      tileColor: isSelected ? kPrimary.withOpacity(0.1) : null,
-    );
-  }
 }
 
-
-
-// ── Energy Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-class EnergyScreen extends StatefulWidget {
+// ── Solar Usage Question ────────────────────────────────────────────────
+class SolarUsageScreen extends StatefulWidget {
   @override
-  _EnergyScreenState createState() => _EnergyScreenState();
+  _SolarUsageScreenState createState() => _SolarUsageScreenState();
 }
 
-class _EnergyScreenState extends State<EnergyScreen> {
-  final _solarController = TextEditingController();
-  final _gasController = TextEditingController();
-  final _electricityController = TextEditingController();
-  final _combinedController = TextEditingController();
-  final _waterController = TextEditingController();
-
-  bool _hasSolar = false;
-  String _fuelType = 'natural_gas';
-  String _hobType = 'gas';
-  bool? _combinedBilling;
-  String _tariff = 'standard';
+class _SolarUsageScreenState extends State<SolarUsageScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
 
   @override
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _hasSolar = profile.solarPanels;
-    _solarController.text = profile.monthlySolarKwh > 0 ? profile.monthlySolarKwh.toString() : '';
-    _fuelType = profile.fuelType;
-    _hobType = profile.hobType;
-    _combinedBilling = profile.combinedBilling;
-    _combinedController.text = profile.monthlyCombinedSpend > 0 ? profile.monthlyCombinedSpend.toString() : '';
-    _gasController.text = profile.monthlyGasSpend > 0 ? profile.monthlyGasSpend.toString() : '';
-    _electricityController.text = profile.monthlyElecSpend > 0 ? profile.monthlyElecSpend.toString() : '';
-    _waterController.text = profile.monthlyWaterSpend > 0 ? profile.monthlyWaterSpend.toString() : '';
-    _tariff = profile.tariff;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/phase1'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-
-                  SizedBox(height: 0),
-
-                  Text(
-                    'Home Energy',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-
-                  progressBar(0.2),
-                  SizedBox(height: 24),
-
-                  Text(
-                    'How much energy does your home use?',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-
-                  // ── 1. Solar panels ──────────────────────────
-                  Text('Do you have solar panels?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<bool>(
-                    value: _hasSolar,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: false, child: Text('No')),
-                      DropdownMenuItem(value: true, child: Text('Yes')),
-                    ],
-                    onChanged: (value) => setState(() => _hasSolar = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  if (_hasSolar) ...[
-                    Text('How much electricity did you use last month from your solar panels?',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                        textAlign: TextAlign.center),
-                    SizedBox(height: 8),
-                    Text(
-                      'Energy you use NOT energy you export.',
-                      style: TextStyle(color: kTextSubtle),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _solarController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                      decoration: InputDecoration(
-                        hintText: 'e.g. 100',
-                        suffixText: 'kWh',
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                  ],
-
-                  // ── 2. Heating fuel type ──────────────────────
-                  Text('Heating fuel type',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _fuelType,
-                    selectedItemBuilder: (context) => [
-                      Text('Mains gas heating'),
-                      Text('Bottled/Tank gas (LPG)'),
-                      Text('No gas, just a heat pump'),
-                    ],
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'natural_gas',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Mains Gas Heating'),
-                            Text('Connected to the gas grid', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'lpg',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Bottled/Tank Gas (LPG)'),
-                            Text('Common in rural areas not on the gas mains', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'heat_pump',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('No gas, just a heat pump'),
-                          ],
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) => setState(() => _fuelType = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  // ── Hob type ───────────────────────────────────
-                  Text('What type of hob do you cook with?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _hobType,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'gas', child: Text('Gas')),
-                      DropdownMenuItem(value: 'electric', child: Text('Electric')),
-                    ],
-                    onChanged: (value) => setState(() => _hobType = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  // ── 3. Combined billing ───────────────────────
-                  Text('Do you get one combined bill for gas and electricity, or separate bills?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<bool>(
-                    value: _combinedBilling,
-                    hint: Text('Select an option'),
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: false, child: Text('Separate bills')),
-                      DropdownMenuItem(value: true, child: Text('One combined bill')),
-                    ],
-                    onChanged: (value) => setState(() => _combinedBilling = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  if (_combinedBilling == true) ...[
-                    Text('What did you spend last month on your combined gas & electricity bill?',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                        textAlign: TextAlign.center),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _combinedController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                      decoration: InputDecoration(
-                        hintText: 'e.g £145',
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                  ] else if (_combinedBilling == false) ...[
-                    Text('What did you spend last month on gas?',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _gasController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                      decoration: InputDecoration(
-                        hintText: 'e.g £75',
-                      ),
-                    ),
-                    SizedBox(height: 24),
-
-                    Text('What did you spend last month on electricity?',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _electricityController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                      decoration: InputDecoration(
-                        hintText: 'e.g £70',
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                  ],
-
-                  // ── 4. Water bill ──────────────────────────────
-                  Text('How much did you spend last month on your water bill?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _waterController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      hintText: 'e.g £30',
-                    ),
-                  ),
-                  SizedBox(height: 24),
-
-                  // ── 5. Tariff type ─────────────────────────────
-                  Text('Tariff type',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _tariff,
-                    selectedItemBuilder: (context) => [
-                      Text('Standard Tariff'),
-                      Text('Green Tariff'),
-                    ],
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'standard',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Standard Tariff'),
-                            Text('Don\'t know? Select this!', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'PPA',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Green Tariff'),
-                            Text('PPA tariffs only (for example with Octopus Energy\'s green tariff)', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) => setState(() => _tariff = value!),
-                  ),
-
-                  SizedBox(height: 32),
-
-                  // Next button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        profile.solarPanels = _hasSolar;
-                        profile.monthlySolarKwh = _hasSolar ? (double.tryParse(_solarController.text) ?? 0) : 0;
-                        profile.fuelType = _fuelType;
-                        profile.hobType = _hobType;
-                        profile.combinedBilling = _combinedBilling;
-                        profile.monthlyCombinedSpend = (_combinedBilling ?? false) ? (double.tryParse(_combinedController.text) ?? 0) : 0;
-                        profile.monthlyGasSpend = (_combinedBilling ?? false) ? 0 : (double.tryParse(_gasController.text) ?? 0);
-                        profile.monthlyElecSpend = (_combinedBilling ?? false) ? 0 : (double.tryParse(_electricityController.text) ?? 0);
-                        profile.monthlyWaterSpend = double.tryParse(_waterController.text) ?? 0;
-                        profile.tariff = _tariff;
-                        profile.update();
-                        context.go('/transport');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Transport Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-class TransportScreen extends StatefulWidget {
-  @override
-  _TransportScreenState createState() => _TransportScreenState();
-}
-
-class _TransportScreenState extends State<TransportScreen> {
-  final _mileageController = TextEditingController();
-  final _busController = TextEditingController();
-  final _trainController = TextEditingController();
-  String _fuelType = 'petrol';
-  String _carSize = 'supermini';
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = Provider.of<ProfileStore>(context, listen: false);
-    _mileageController.text = profile.weeklyMileage > 0 ? profile.weeklyMileage.toString() : '';
-    _busController.text = profile.monthlyBusSpend > 0 ? profile.monthlyBusSpend.toString() : '';
-    _trainController.text = profile.monthlyTrainSpend > 0 ? profile.monthlyTrainSpend.toString() : '';
-    _fuelType = profile.carFuel;
-    _carSize = profile.carSize;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/energy'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-
-                  SizedBox(height: 0),
-
-                  Text(
-                    'Transport',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-
-                  progressBar(0.3),
-                  SizedBox(height: 24),
-
-                  Text(
-                    'CO2 emissions from transport',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-
-                  // Car type dropdown
-                  Text('Car type',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _carSize,
-                    selectedItemBuilder: (context) => [
-                      Text('Very Small Car'),
-                      Text('Small Car'),
-                      Text('Medium Sized Car'),
-                      Text('Large Car'),
-                      Text('Premium Car'),
-                      Text('Luxury Car'),
-                      Text('Sports Car'),
-                      Text('SUV/ 4x4'),
-                      Text('People Carrier'),
-                    ],
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'mini',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Very Small Car'),
-                            Text('e.g. Fiat 500, Smart Car', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'supermini',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Small Car'),
-                            Text('e.g. VW Polo, Ford Fiesta', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'lower medium',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Medium Sized Car'),
-                            Text('e.g. VW Golf, Ford Focus', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'upper medium',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Large Car'),
-                            Text('e.g. BMW 3 Series, Audi A4 - 5 seaters, but spacious', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'executive',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Premium Car'),
-                            Text('e.g. BMW 5 Series, Mercedes E-Class', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'luxury',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Luxury Car'),
-                            Text('e.g. Mercedes S-Class, Bentley - fancy cars you don\'t often see!', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'sports',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Sports Car'),
-                            Text('e.g. Porsche 911, Mazda MX-5', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'dual purpose',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('SUV/ 4x4'),
-                            Text('e.g. Toyota RAV4, VW Tiguan', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'mpv',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('People Carrier'),
-                            Text('e.g. Ford Galaxy, VW Sharan - boxier cars designed for 7+ people', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) => setState(() => _carSize = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Fuel type dropdown
-                  Text('What fuel does your car use?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _fuelType,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'petrol', child: Text('Petrol')),
-                      DropdownMenuItem(value: 'diesel', child: Text('Diesel')),
-                      DropdownMenuItem(value: 'plug in hybrid', child: Text('Plug In Hybrid')),
-                      DropdownMenuItem(value: 'electric', child: Text('Electric')),
-                    ],
-                    onChanged: (value) => setState(() => _fuelType = value!),
-                  ),
-                  SizedBox(height: 24),
-
-
-                  // Car Mileage
-                  Text('What\'s your weekly mileage?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _mileageController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      hintText: 'e.g. 150',
-                      suffixText: 'miles',
-                    ),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Public transport usage
-                  Text('Monthly Spending On Buses Or Taxis (£)',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _busController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      hintText: 'e.g. £20',
-                    ),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Train usage
-                  Text('Monthly Spending On Trains (£)',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _trainController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      hintText: 'e.g. £25',
-                    ),
-                  ),
-
-                  SizedBox(height: 32),
-
-                  // Next button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        profile.carFuel = _fuelType;
-                        profile.carSize = _carSize;
-                        profile.weeklyMileage = double.tryParse(_mileageController.text) ?? 0;
-                        profile.monthlyBusSpend = double.tryParse(_busController.text) ?? 0;
-                        profile.monthlyTrainSpend = double.tryParse(_trainController.text) ?? 0;
-                        profile.update();
-                        context.go('/flights');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Flights Screen ────────────────────────────────────────────────────────────
-class FlightsScreen extends StatefulWidget {
-  @override
-  _FlightsScreenState createState() => _FlightsScreenState();
-}
-
-class _FlightsScreenState extends State<FlightsScreen> {
-  List<Map<String, dynamic>> _trips = [];
-  List<Map<String, dynamic>> _ukStays = [];
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = Provider.of<ProfileStore>(context, listen: false);
-    _trips = profile.flights.map((trip) => Map<String, dynamic>.from(trip)).toList();
-    _ukStays = profile.ukStays.map((stay) => Map<String, dynamic>.from(stay)).toList();
-  }
-
-  void _addTrip() {
-    setState(() {
-      _trips.add({
-        'country': 'France',
-        'seat': 'economy',
-        'passengers': 1,
-        'nights': 0,
-        'accommodation': 'hotel',
-      });
+    if (profile.monthlySolarKwh > 0) {
+      _controller.text = profile.monthlySolarKwh.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
     });
   }
 
-  void _removeTrip(int index) {
-    setState(() => _trips.removeAt(index));
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.04,
+      question: 'How much electricity did you use last month from your solar panels?',
+      answered: _hasValue,
+      backRoute: '/solar',
+      onNext: () {
+        profile.monthlySolarKwh = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/heating-fuel');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '100',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  'kWh',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Energy you use NOT energy you export.',
+            style: TextStyle(color: kTextSubtle, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Heating Fuel Question ───────────────────────────────────────────────
+class HeatingFuelScreen extends StatefulWidget {
+  @override
+  _HeatingFuelScreenState createState() => _HeatingFuelScreenState();
+}
+
+class _HeatingFuelScreenState extends State<HeatingFuelScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.fuelTypeAnswered ? profile.fuelType : null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
+    final profile = Provider.of<ProfileStore>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/transport'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
+    return QuizFrame(
+      progress: 0.06,
+      question: 'What type of heating fuel do you use?',
+      answered: _selected != null,
+      backRoute: profile.solarPanels ? '/solar-usage' : '/solar',
+      onNext: () {
+        profile.fuelType = _selected!;
+        profile.fuelTypeAnswered = true;
+        profile.update();
+        context.go('/hob-type');
+      },
+      answerContent: buildSingleSelectOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        options: [
+          {
+            'value': 'natural_gas',
+            'label': 'Mains Gas Heating',
+            'subtitle': 'Connected to the gas grid',
+            'icon': Icons.local_fire_department,
+          },
+          {
+            'value': 'lpg',
+            'label': 'Bottled/Tank Gas (LPG)',
+            'subtitle': 'Common in rural areas not on the gas mains',
+            'icon': Icons.propane_tank,
+          },
+          {
+            'value': 'heat_pump',
+            'label': 'No gas, just a heat pump',
+            'icon': Icons.heat_pump,
+          },
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+    );
+  }
+}
+
+// ── Hob Type Question ───────────────────────────────────────────────────
+class HobTypeScreen extends StatefulWidget {
+  @override
+  _HobTypeScreenState createState() => _HobTypeScreenState();
+}
+
+class _HobTypeScreenState extends State<HobTypeScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.hobTypeAnswered ? profile.hobType : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.08,
+      question: 'What type of hob do you cook with?',
+      answered: _selected != null, //for answered to be true, selected has to not equal null. It depends on selected
+      backRoute: '/heating-fuel',
+      onNext: () {
+        profile.hobType = _selected!;
+        profile.hobTypeAnswered = true;
+        profile.update();
+        context.go('/combined-billing');
+      },
+      answerContent: buildTwoOptionBoxes(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        leftValue: 'gas',
+        leftLabel: 'Gas',
+        leftIcon: Icons.local_fire_department,
+        rightValue: 'electric',
+        rightLabel: 'Electric',
+        rightIcon: Icons.electric_bolt,
+      ),
+    );
+  }
+}
+
+// ── Combined Billing Question ─────────────────────────────────────────────────
+class CombinedBillingScreen extends StatefulWidget {
+  @override
+  _CombinedBillingScreenState createState() => _CombinedBillingScreenState();
+}
+
+class _CombinedBillingScreenState extends State<CombinedBillingScreen> {
+  bool? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.combinedBilling;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.1,
+      question: 'Do you get one combined bill for gas and electricity, or separate bills?',
+      answered: _selected != null,
+      backRoute: '/hob-type',
+      onNext: () {
+        profile.combinedBilling = _selected!;
+        profile.update();
+        if (_selected == true) {
+          context.go('/gas-elec-spend');
+        } else {
+          context.go('/gas-spend');
+        }
+      },
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        leftLabel: 'One combined bill',
+        leftIcon: Icons.receipt_long,
+        rightLabel: 'Separate bills',
+        rightIcon: Icons.receipt,
+      ),
+    );
+  }
+}
+
+// ── Combined Spend Question ────────────────────────────────────────────────
+class CombinedSpendScreen extends StatefulWidget {
+  @override
+  _CombinedSpendScreenState createState() => _CombinedSpendScreenState();
+}
+
+class _CombinedSpendScreenState extends State<CombinedSpendScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.monthlyCombinedSpend > 0) {
+      _controller.text = profile.monthlyCombinedSpend.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.12,
+      question: 'What did you spend last month on your combined gas & electricity bill?',
+      answered: _hasValue,
+      backRoute: '/combined-billing',
+      onNext: () {
+        profile.monthlyCombinedSpend = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/water-spend');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
               children: [
-
-                SizedBox(height: 0),
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
                 Text(
-                  'Flights & Holidays',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-                progressBar(0.4),
-                SizedBox(height: 24),
-
-                Text(
-                  'Where did you travel last year?',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Add each trip separately.',
-                  style: TextStyle(color: kTextSubtle),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 24),
-
-                // Scrollable list of trips + UK stays
-                Expanded(
-                  child: ListView(
-                    children: [
-
-                      // Abroad trips
-                      ..._trips.asMap().entries.map((entry) {
-                        int i = entry.key;
-                        Map<String, dynamic> trip = entry.value;
-                        return _buildTripCard(i, trip);
-                      }).toList(),
-
-                      // Add trip button
-                      SizedBox(height: 4),
-                      OutlinedButton.icon(
-                        onPressed: _addTrip,
-                        icon: Icon(Icons.add, color: kPrimary),
-                        label: Text('Add a trip',
-                            style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600)),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: kPrimary),
-                          shape: StadiumBorder(),
-                        ),
-                      ),
-
-                      // UK stays section
-                      SizedBox(height: 24),
-                      Text(
-                        'UK hotel or Airbnb stays',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 8),
-                      _buildUkStayCard(),
-                    ],
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
                   ),
                 ),
-
-                SizedBox(height: 16),
-
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      profile.flights = _trips;
-                      profile.ukStays = _ukStays;
-                      profile.update();
-                      context.go('/diet');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '150',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Gas Spend Question ────────────────────────────────────────────────
+class GasSpendScreen extends StatefulWidget {
+  @override
+  _GasSpendScreenState createState() => _GasSpendScreenState();
+}
+
+class _GasSpendScreenState extends State<GasSpendScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.monthlyGasSpend > 0) {
+      _controller.text = profile.monthlyGasSpend.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.12,
+      question: 'What did you spend last month on your gas bill?',
+      answered: _hasValue,
+      backRoute: '/combined-billing',
+      onNext: () {
+        profile.monthlyGasSpend = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/elec-spend');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Text(
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '70',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Electricity Spend Question ────────────────────────────────────────────────
+class ElecSpendScreen extends StatefulWidget {
+  @override
+  _ElecSpendScreenState createState() => _ElecSpendScreenState();
+}
+
+class _ElecSpendScreenState extends State<ElecSpendScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.monthlyElecSpend > 0) {
+      _controller.text = profile.monthlyElecSpend.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.13,
+      question: 'What did you spend last month on your electricity bill?',
+      answered: _hasValue,
+      backRoute: '/gas-spend',
+      onNext: () {
+        profile.monthlyElecSpend = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/water-spend');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Text(
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '75',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Water Spend Question ────────────────────────────────────────────────
+class WaterSpendScreen extends StatefulWidget {
+  @override
+  _WaterSpendScreenState createState() => _WaterSpendScreenState();
+}
+
+class _WaterSpendScreenState extends State<WaterSpendScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.monthlyWaterSpend > 0) {
+      _controller.text = profile.monthlyWaterSpend.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.14,
+      question: 'What did you spend last month on your water bill?',
+      answered: _hasValue,
+      backRoute: profile.combinedBilling == true ? '/gas-elec-spend' : '/elec-spend',
+      onNext: () {
+        profile.monthlyWaterSpend = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/tariff-type');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Text(
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '30',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Tariff Type Question ────────────────────────────────────────────────
+class TariffTypeScreen extends StatefulWidget {
+  @override
+  _TariffTypeScreenState createState() => _TariffTypeScreenState();
+}
+
+class _TariffTypeScreenState extends State<TariffTypeScreen> {
+  bool? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.tariffAnswered ? (profile.tariff == 'PPA') : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.16,
+      question: 'What type of electricity tariff are you on?',
+      answered: _selected != null,
+      backRoute: '/water-spend',
+      onNext: () {
+        profile.tariff = _selected! ? 'PPA' : 'standard';
+        profile.tariffAnswered = true;
+        profile.update();
+        context.go('/transport-intro');
+      },
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        leftLabel: 'Green (PPA)',
+        leftIcon: Icons.eco,
+        leftSubtitle: 'Power Purchase Agreement tariffs only, sourced directly from renewable sites (for example with Octopus Energy\'s green tariff)',
+        rightLabel: 'Standard',
+        rightIcon: Icons.bolt,
+        rightSubtitle: 'A regular electricity tariff from the general grid mix. Don\'t know? Select this!',
+      ),
+    );
+  }
+}
+
+// ── Transport Section Intro ─────────────────────────────────────────────
+class TransportIntroScreen extends StatelessWidget {
+  static const Color kTransportBlue = Color(0xFF5B84A6);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/hob-type'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kTransportBlue),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Stack(
+            children: [
+              Positioned(
+                top: 60,
+                right: 24,
+                child: Transform.rotate(
+                  angle: -0.4,
+                  child: Icon(Icons.directions_car, color: kTransportBlue, size: 90),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Transport',
+                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'About how you get around',
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/car-size'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kTransportBlue,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Let\'s Go →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Car Size Question ───────────────────────────────────────────────────
+class CarSizeScreen extends StatefulWidget {
+  @override
+  _CarSizeScreenState createState() => _CarSizeScreenState();
+}
+
+class _CarSizeScreenState extends State<CarSizeScreen> {
+  String? _selected;
+  static const Color kTransportBlue = Color(0xFF5B84A6);
+
+  final List<Map<String, String>> _options = [
+    {'value': 'mini', 'label': 'Mini', 'image': 'assets/images/car_mini.png', 'description': 'e.g. Fiat 500, Smart Car'},
+    {'value': 'supermini', 'label': 'Supermini', 'image': 'assets/images/car_supermini.png', 'description': 'e.g. VW Polo, Ford Fiesta'},
+    {'value': 'lower_medium', 'label': 'Lower Medium', 'image': 'assets/images/car_lower_medium.png', 'description': 'e.g. VW Golf, Ford Focus'},
+    {'value': 'upper_medium', 'label': 'Upper Medium', 'image': 'assets/images/car_upper_medium.png', 'description': 'e.g. BMW 3 Series, Audi A4'},
+    {'value': 'executive', 'label': 'Executive', 'image': 'assets/images/car_executive.png', 'description': 'e.g. BMW 5 Series, Mercedes E-Class'},
+    {'value': 'luxury', 'label': 'Luxury', 'image': 'assets/images/car_luxury.png', 'description': 'e.g. Mercedes S-Class, Bentley'},
+    {'value': 'sports', 'label': 'Sports', 'image': 'assets/images/car_sports.png', 'description': 'e.g. Porsche 911, Mazda MX-5'},
+    {'value': 'dual_purpose', 'label': 'SUV / 4x4', 'image': 'assets/images/car_suv.png', 'description': 'e.g. Toyota RAV4, VW Tiguan'},
+    {'value': 'mpv', 'label': 'People Carrier', 'image': 'assets/images/car_mpv.png', 'description': 'e.g. Ford Galaxy, VW Sharan'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.carSizeAnswered ? profile.carSize : null;
+  }
+
+  void _showDescription(Map<String, String> option) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(option['label']!),
+          content: Text(option['description']!),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                setState(() => _selected = option['value']);
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: kTransportBlue),
+              child: Text('Select this car type'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.20,
+      question: 'What size is your car?',
+      answered: _selected != null,
+      backRoute: '/transport-intro',
+      accentColor: kTransportBlue,
+      onNext: () {
+        profile.carSize = _selected!;
+        profile.carSizeAnswered = true;
+        profile.update();
+        context.go('/car-fuel');
+      },
+      answerContent: SizedBox(
+        height: 340,
+        child: SingleChildScrollView(
+          child: GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 16,
+            childAspectRatio: 0.85,
+            children: _options.map((opt) {
+              final isSelected = _selected == opt['value'];
+              return GestureDetector(
+                onTap: () => _showDescription(opt),
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? kTransportBlue.withOpacity(0.15) : kSurface,
+                    border: Border.all(color: isSelected ? kTransportBlue : kBorder, width: isSelected ? 2 : 1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Image.asset(
+                          opt['image']!,
+                          fit: BoxFit.contain,
+                          color: isSelected ? kTransportBlue : kTextSubtle,
+                          colorBlendMode: BlendMode.srcIn,
+                        ),
+                      ),
+                      SizedBox(height: 6),
+                      Text(
+                        opt['label']!,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kText),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Car Fuel Question ───────────────────────────────────────────────
+class CarFuelScreen extends StatefulWidget {
+  @override
+  _CarFuelScreenState createState() => _CarFuelScreenState();
+}
+
+class _CarFuelScreenState extends State<CarFuelScreen> {
+  String? _selected;
+  static const Color kTransportBlue = Color(0xFF5B84A6);
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.carFuelTypeAnswered ? profile.carFuel : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.22,
+      question: 'What type of fuel does your car use?',
+      answered: _selected != null,
+      backRoute: '/car-size',
+      accentColor: kTransportBlue,
+      onNext: () {
+        profile.carFuel = _selected!;
+        profile.carFuelTypeAnswered = true;
+        profile.update();
+        context.go('/weekly-mileage');
+      },
+      answerContent: buildSingleSelectOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        accentColor: kTransportBlue,
+        options: [
+          {
+            'value': 'petrol',
+            'label': 'Petrol',
+            'icon': Icons.local_gas_station,
+          },
+          {
+            'value': 'diesel',
+            'label': 'Diesel',
+            'icon': Icons.oil_barrel,
+          },
+          {
+            'value': 'plug in hybrid',
+            'label': 'Plug In Hybrid',
+            'icon': Icons.ev_station,
+          },
+          {
+            'value': 'electric',
+            'label': 'Electric',
+            'icon': Icons.electric_bolt,
+          },
+        ],
+      ),
+    );
+  }
+}
+
+// ──── Weekly Mileage Question ────────────────────────────────────────────────
+class WeeklyMileageScreen extends StatefulWidget {
+  @override
+  _WeeklyMileageScreenState createState() => _WeeklyMileageScreenState();
+}
+
+class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+  static const Color kTransportBlue = Color(0xFF5B84A6);
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.weeklyMileage > 0) {
+      _controller.text = profile.weeklyMileage.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.24,
+      question: 'What is you average weekly mileage?',
+      answered: _hasValue,
+      backRoute: '/car-fuel',
+      accentColor: kTransportBlue,
+      onNext: () {
+        profile.weeklyMileage = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/bus-spend');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '90',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  'miles',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──── Bus/Taxi Question ────────────────────────────────────────────────
+class BusSpendScreen extends StatefulWidget {
+  @override
+  _BusSpendScreenState createState() => _BusSpendScreenState();
+}
+
+class _BusSpendScreenState extends State<BusSpendScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+  static const Color kTransportBlue = Color(0xFF5B84A6);
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.monthlyBusSpend > 0) {
+      _controller.text = profile.monthlyBusSpend.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.26,
+      question: 'How much do you spend per month on bus and taxi fares?',
+      answered: _hasValue,
+      backRoute: '/weekly-mileage',
+      accentColor: kTransportBlue,
+      onNext: () {
+        profile.monthlyBusSpend = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/train-spend');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Text(
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '25',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──── Train Question ────────────────────────────────────────────────
+class TrainSpendScreen extends StatefulWidget {
+  @override
+  _TrainSpendScreenState createState() => _TrainSpendScreenState();
+}
+
+class _TrainSpendScreenState extends State<TrainSpendScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+  static const Color kTransportBlue = Color(0xFF5B84A6);
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.monthlyTrainSpend > 0) {
+      _controller.text = profile.monthlyTrainSpend.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.28,
+      question: 'How much do you spend per month on train fares?',
+      answered: _hasValue,
+      backRoute: '/bus-spend',
+      accentColor: kTransportBlue,
+      onNext: () {
+        profile.monthlyTrainSpend = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/flights-intro');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Text(
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '45',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const Color kFlightsGreen = Color(0xFF01821F);
+// ── Flights Section Intro ───────────────────────────────────────────────
+class FlightsIntroScreen extends StatelessWidget {
+  @override
+
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/train-spend'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kFlightsGreen),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Stack(
+            children: [
+              Positioned(
+                top: 60,
+                right: 24,
+                child: Transform.rotate(
+                  angle: -0.4,
+                  child: Icon(Icons.flight, color: kFlightsGreen, size: 90),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Flights',
+                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'About your air travel',
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/flights-question'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kFlightsGreen,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Let\'s Go →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Flights Question — Interactive Globe ────────────────────────────────
+class FlightsGlobeScreen extends StatefulWidget {
+  @override
+  _FlightsGlobeScreenState createState() => _FlightsGlobeScreenState();
+}
+
+enum _TripStep { none, countryList, nights, accommodation, people }
+
+class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
+  late final EarthController _controller;
+
+  _TripStep _step = _TripStep.none;
+  List<String> _countryOptions = [];
+  String? _selectedCountry;
+  final _nightsController = TextEditingController();
+  bool _hasNights = false;
+  String? _selectedAccommodation;
+  int? _selectedPeople;
+  Offset _dragOffset = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = EarthController();
+    _controller.setLightMode(EarthLightMode.followCamera);
+    _controller.enableAutoRotate = false;
+
+    _nightsController.addListener(() {
+      setState(() => _hasNights = _nightsController.text.trim().isNotEmpty);
+    });
+
+    for (final region in globeRegions) {
+      final regionLat = region['lat'] as double;
+      final regionLon = region['lon'] as double;
+      _controller.addNode(
+        EarthNode(
+          id: region['id'] as String,
+          latitude: regionLat,
+          longitude: regionLon,
+          child: GestureDetector(
+            onTap: () => _onRegionTapped(regionLat, regionLon),
+            child: Icon(Icons.location_on, color: kFlightsGreen, size: 28),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _onRegionTapped(double lat, double lon) {
+    _controller.enableAutoRotate = false;
+    _controller.setCameraFocus(lat, lon);
+
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted) {
+        _controller.setCameraFocus(lat, lon);
+        _controller.setZoom(2.0);
+      }
+    });
+
+    setState(() {
+      _countryOptions = findNearbyCountries(lat, lon);
+      _step = _TripStep.countryList;
+    });
+  }
+
+  void _selectCountry(String country) {
+    setState(() {
+      _selectedCountry = country;
+      _step = _TripStep.nights;
+    });
+  }
+
+  void _saveTrip() {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    profile.flights.add({
+      'country': _selectedCountry,
+      'nights': int.tryParse(_nightsController.text) ?? 0,
+      'accommodation': _selectedAccommodation,
+      'passengers': _selectedPeople,
+      'seat': 'economy',
+    });
+    profile.update();
+    _controller.enableAutoRotate = false;
+    _controller.setZoom(1.0);
+    setState(() {
+      _step = _TripStep.none;
+      _selectedCountry = null;
+      _nightsController.clear();
+      _selectedAccommodation = null;
+      _selectedPeople = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _nightsController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildOverlayPanel() {
+    switch (_step) {
+      case _TripStep.countryList:
+        return Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: kSurface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          constraints: BoxConstraints(maxHeight: 320, maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Which country?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText)),
+              SizedBox(height: 12),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _countryOptions.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(_countryOptions[index]),
+                      onTap: () => _selectCountry(_countryOptions[index]),
+                    );
+                  },
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  _controller.enableAutoRotate = false;
+                  _controller.setZoom(1.0);
+                  setState(() => _step = _TripStep.none);
+                },
+                child: Text('Cancel', style: TextStyle(color: kTextSubtle)),
+              ),
+            ],
+          ),
+        );
+
+      case _TripStep.nights:
+        return Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          constraints: BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: kText),
+                  onPressed: () => setState(() => _step = _TripStep.countryList),
+                ),
+              ),
+              Text('How many nights in $_selectedCountry?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center),
+              SizedBox(height: 16),
+              TextField(
+                controller: _nightsController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*'))],
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(hintText: 'e.g. 7'),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _hasNights ? () => setState(() => _step = _TripStep.accommodation) : null,
+                style: ElevatedButton.styleFrom(backgroundColor: kFlightsGreen),
+                child: Text('Next →'),
+              ),
+            ],
+          ),
+        );
+
+      case _TripStep.accommodation:
+        return Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          constraints: BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: kText),
+                  onPressed: () => setState(() => _step = _TripStep.nights),
+                ),
+              ),
+              Text('Where did you stay in $_selectedCountry?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center),
+              SizedBox(height: 16),
+              buildSingleSelectOptions(
+                selected: _selectedAccommodation,
+                onSelect: (value) => setState(() {
+                  _selectedAccommodation = value;
+                  _step = _TripStep.people;
+                }),
+                options: [
+                  {'value': 'hotel', 'label': 'Hotel', 'icon': Icons.hotel},
+                  {'value': 'airbnb', 'label': 'Airbnb / Rental', 'icon': Icons.house},
+                  {'value': 'friends_family', 'label': 'With friends/family', 'icon': Icons.people},
+                  {'value': 'hostel', 'label': 'Hostel', 'icon': Icons.bed},
+                ],
+              ),
+            ],
+          ),
+        );
+
+      case _TripStep.people:
+        return Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          constraints: BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: kText),
+                  onPressed: () => setState(() => _step = _TripStep.accommodation),
+                ),
+              ),
+              Text('How many people from your household went?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center),
+              SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      if (_selectedPeople != null && _selectedPeople! > 1) {
+                        setState(() => _selectedPeople = _selectedPeople! - 1);
+                      }
+                    },
+                    icon: Icon(Icons.remove_circle_outline, color: kFlightsGreen),
+                  ),
+                  Text(_selectedPeople?.toString() ?? '–', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                  IconButton(
+                    onPressed: () => setState(() => _selectedPeople = (_selectedPeople ?? 0) + 1),
+                    icon: Icon(Icons.add_circle_outline, color: kFlightsGreen),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _selectedPeople == null ? null : _saveTrip,
+                style: ElevatedButton.styleFrom(backgroundColor: kFlightsGreen),
+                child: Text('Save Trip'),
+              ),
+            ],
+          ),
+        );
+
+      case _TripStep.none:
+        return SizedBox.shrink();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/flights-intro'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kFlightsGreen),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: GestureDetector(
+                onPanStart: (_) => _controller.enableAutoRotate = false,
+                onPanUpdate: (details) {
+                  _dragOffset += details.delta;
+                  _controller.setOffset(_dragOffset);
+                },
+                onPanEnd: (_) {
+                  _controller.setOffset(_dragOffset);
+                },
+                child: Earth3D(
+                  controller: _controller,
+                  texture: const AssetImage('assets/images/2k_earth-day.jpg'),
+                  initialScale: 3,
+                ),
+              ),
+            ),
+            if (_step == _TripStep.none)
+              Positioned(
+                left: 24,
+                right: 24,
+                bottom: 32,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/uk-intro'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kFlightsGreen,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text('No more trips →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+            if (_step != _TripStep.none)
+              Positioned.fill(
+                child: Center(
+                  child: _buildOverlayPanel(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+const Color kTripsRed = Color(0xFFE66051);
+// ── UK Trips Section Intro ───────────────────────────────────────────────
+class UKIntroScreen extends StatelessWidget {
+  @override
+
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/flights-question'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kTripsRed),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Stack(
+            children: [
+              Positioned(
+                top: 60,
+                right: 24,
+                child: Transform.rotate(
+                  angle: -0.4,
+                  child: Icon(Icons.flight, color: kTripsRed, size: 90),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'UK Stays',
+                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'About nights away in the UK',
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/hotel-nights'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kTripsRed,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Let\'s Go →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──── Hotel Stays Question ────────────────────────────────────────────────
+class HotelNightsScreen extends StatefulWidget {
+  @override
+  _HotelNightsScreenState createState() => _HotelNightsScreenState();
+}
+
+class _HotelNightsScreenState extends State<HotelNightsScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+  static const Color kTripsRed = Color(0xFFE66051);
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.hotelNights > 0) {
+      _controller.text = profile.hotelNights.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.44,
+      question: 'Roughly how many nights per year do you stay in UK airbnb\'s or holiday homes?',
+      answered: _hasValue,
+      backRoute: '/UK-intro',
+      accentColor: kTripsRed,
+      onNext: () {
+        profile.hotelNights = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/airbnb-nights');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '10',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  'nights',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──── AirBnB Stays Question ────────────────────────────────────────────────
+class AirbnbNightsScreen extends StatefulWidget {
+  @override
+  _AirbnbNightsScreenState createState() => _AirbnbNightsScreenState();
+}
+
+class _AirbnbNightsScreenState extends State<AirbnbNightsScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+  static const Color kTripsRed = Color(0xFFE66051);
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.airbnbNights > 0) {
+      _controller.text = profile.airbnbNights.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.44,
+      question: 'Roughly how many nights per year do you stay in UK hotels?',
+      answered: _hasValue,
+      backRoute: '/hotel-nights',
+      accentColor: kTripsRed,
+      onNext: () {
+        profile.airbnbNights = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/pet-intro');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '10',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  'nights',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const Color kPetsPurple = Color(0xFFA351DD);
+// ── Pets Section Intro ───────────────────────────────────────────────
+class PetsIntroScreen extends StatelessWidget {
+  @override
+
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/airbnb-nights'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kPetsPurple),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Stack(
+            children: [
+              Positioned(
+                top: 60,
+                right: 24,
+                child: Transform.rotate(
+                  angle: -0.4,
+                  child: Icon(Icons.flight, color: kPetsPurple, size: 90),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Your Pets',
+                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Your pets and their diets',
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/pets-question'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kTripsRed,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Let\'s Go →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pets Question Screen ────────────────────────────────────────────────
+class PetsQuestionScreen extends StatefulWidget {
+  @override
+  _PetsQuestionScreenState createState() => _PetsQuestionScreenState();
+}
+
+class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
+  List<Map<String, dynamic>> _pets = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _pets = profile.pets.map((pet) => Map<String, dynamic>.from(pet)).toList();
+  }
+
+  void _showAddPetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('What type of pet?'),
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            GestureDetector(
+              onTap: () => _addPet('dog'),
+              child: Column(
+                children: [
+                  Icon(Icons.pets, color: kPetsPurple, size: 48),
+                  SizedBox(height: 8),
+                  Text('Dog', style: TextStyle(color: kText, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _addPet('cat'),
+              child: Column(
+                children: [
+                  Icon(Icons.pets, color: kPetsPurple, size: 48),
+                  SizedBox(height: 8),
+                  Text('Cat', style: TextStyle(color: kText, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  String _getHaulType(String country) {
-    const domestic = ['United Kingdom', 'Guernsey', 'Isle Of Man', 'Jersey'];
-    const shortHaul = ['France', 'Germany', 'Spain', 'Italy', 'Greece', 
-      'Portugal', 'Netherlands', 'Belgium', 'Ireland', 'Austria', 'Switzerland',
-      'Denmark', 'Norway', 'Sweden', 'Finland', 'Poland', 'Czech Republic',
-      'Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Albania', 'Algeria',
-      'Belarus', 'Bosnia-Herzegovina', 'Cyprus', 'Egypt', 'Estonia',
-      'Faroe Islands', 'Gibraltar', 'Greenland', 'Iceland', 'Kosovo',
-      'Latvia', 'Libya', 'Lithuania', 'Luxembourg', 'Macedonia', 'Malta',
-      'Moldova', 'Montenegro', 'Morocco', 'Serbia', 'Slovak Republic',
-      'Slovenia', 'Tunisia', 'Turkey', 'Ukraine', 'Western Sahara',
-      'DR Congo', 'Lithuania',
-    ];
-    if (domestic.contains(country)) return 'domestic';
-    if (shortHaul.contains(country)) return 'short_haul';
-    return 'long_haul';
+  void _addPet(String type) {
+    Navigator.of(context).pop();
+    setState(() {
+      _pets.add({
+        'type': type,
+        'name': '',
+        'food': null,
+        'brand': null,
+        'diet': null,
+        'weight': null,
+      });
+    });
   }
 
-  List<DropdownMenuItem<String>> _getSeatItems(String country) {
-    String haul = _getHaulType(country);
-    if (haul == 'domestic') {
-      return [
-        DropdownMenuItem(value: 'average', child: Text('Average')),
-      ];
-    } else if (haul == 'short_haul') {
-      return [
-        DropdownMenuItem(value: 'economy', child: Text('Economy')),
-        DropdownMenuItem(value: 'business', child: Text('Business')),
-      ];
-    } else {
-      return [
-        DropdownMenuItem(value: 'economy', child: Text('Economy')),
-        DropdownMenuItem(value: 'premium_economy', child: Text('Premium Economy')),
-        DropdownMenuItem(value: 'business', child: Text('Business')),
-        DropdownMenuItem(value: 'first', child: Text('First Class')),
-      ];
-    }
-  }
-
-  Widget _buildTripCard(int index, Map<String, dynamic> trip) {
-    final countries = [
-      'Afghanistan', 'Albania', 'Algeria', 'American Samoa', 'Angola',
-      'Anguilla', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Aruba',
-      'Ascension Island', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas',
-      'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize',
-      'Benin', 'Bermuda', 'Bolivia', 'Bosnia-Herzegovina', 'Botswana',
-      'Brazil', 'British Virgin Islands', 'Brunei', 'Bulgaria', 'Burkina Faso',
-      'Burundi', 'Cambodia', 'Cameroon', 'Canada', 'Cape Verde',
-      'Cayman Islands', 'Central African Republic', 'Chad', 'Chile', 'China',
-      'Colombia', 'Comoros', 'Congo-Brazzaville', 'Cook Islands', 'Costa Rica',
-      'Croatia', 'Cuba', 'Curacao', 'Cyprus', 'Czech Republic', 'Denmark',
-      'Djibouti', 'Dominica', 'Dominican Republic', 'DR Congo', 'Ecuador',
-      'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia',
-      'Ethiopia', 'Falkland Islands', 'Faroe Islands', 'Fiji', 'Finland',
-      'France', 'French Guiana', 'Gabon', 'Gambia', 'Georgia', 'Germany',
-      'Ghana', 'Gibraltar', 'Greece', 'Greenland', 'Grenada', 'Guadeloupe',
-      'Guam', 'Guatemala', 'Guernsey', 'Guinea', 'Guinea-Bissau', 'Guyana',
-      'Haiti', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India',
-      'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Isle Of Man', 'Israel',
-      'Italy', 'Ivory Coast', 'Jamaica', 'Japan', 'Jersey', 'Jordan',
-      'Kazakhstan', 'Kenya', 'Kosovo', 'Kuwait', 'Kyrgyzstan', 'Laos',
-      'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Lithuania',
-      'Luxembourg', 'Macao', 'Macedonia', 'Madagascar', 'Malawi', 'Malaysia',
-      'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Martinique',
-      'Mauritania', 'Mauritius', 'Mexico', 'Moldova', 'Mongolia', 'Montenegro',
-      'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nepal', 'Netherlands',
-      'New Caledonia', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria',
-      'North Korea', 'Norway', 'Oman', 'Pakistan', 'Palau', 'Panama',
-      'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland',
-      'Portugal', 'Puerto Rico', 'Qatar', 'Reunion', 'Romania', 'Russia',
-      'Rwanda', 'Sao Tome Islands', 'Saudi Arabia', 'Senegal', 'Serbia',
-      'Seychelles', 'Sierra Leone', 'Singapore', 'Slovak Republic', 'Slovenia',
-      'Solomon Islands', 'Somali Republic', 'South Africa', 'South Korea',
-      'South Sudan', 'Spain', 'Sri Lanka', 'St Kitts and Nevis', 'St Lucia',
-      'St Vincent and the Grenadines', 'Sudan', 'Surinam', 'Swaziland',
-      'Sweden', 'Switzerland', 'Syria', 'Tahiti', 'Taiwan', 'Tajikistan',
-      'Tanzania', 'Thailand', 'Timor', 'Togo', 'Tonga', 'Trinidad and Tobago',
-      'Tunisia', 'Turkey', 'Turkmenistan', 'Turks and Caicos Islands', 'Uganda',
-      'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States',
-      'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela', 'Vietnam',
-      'Virgin Islands (U.S.A)', 'Wake Islands', 'Western Sahara', 'Yemen',
-      'Zambia', 'Zimbabwe',
-    ];
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-
-          // Header with remove button
-          Stack( //layers children instead of laying them out in sequence like a row
-            alignment: Alignment.center,
-            children: [
-              Center(
-                child: Text('Trip ${index + 1}',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: () => _removeTrip(index),
-                  icon: Icon(Icons.close, color: kTextSubtle, size: 20),
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints(),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          
-          // Country dropdown
-          Text('Destination', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            value: trip['country'],
-            decoration: InputDecoration(isDense: true),
-            items: countries.map((c) =>
-                DropdownMenuItem(value: c, child: Text(c))).toList(),
-            onChanged: (value) {
-              setState(() {
-                _trips[index]['country'] = value!;
-                String haul = _getHaulType(value);
-                if (haul == 'domestic') {
-                  _trips[index]['seat'] = 'average';
-                } else {
-                  _trips[index]['seat'] = 'economy';
-                }
-              });
-            },
-          ),
-          if (trip['country'] == 'United Kingdom' ||
-              trip['country'] == 'Guernsey' ||
-              trip['country'] == 'Isle Of Man' ||
-              trip['country'] == 'Jersey')
-            Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text(
-                '✈ Domestic flight — e.g. London to Edinburgh',
-                style: TextStyle(fontSize: 11, color: kPrimary),
-              ),
-            ),
-          SizedBox(height: 12),
-
-          // Seat class — dynamic based on country
-          Text('Seat class', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            value: trip['seat'],
-            decoration: InputDecoration(isDense: true),
-            items: _getSeatItems(trip['country']),
-            onChanged: (value) => setState(() => _trips[index]['seat'] = value!),
-          ),
-          SizedBox(height: 12),
-
-          // Passengers and nights
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text('Passengers', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                    SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            if (trip['passengers'] > 1)
-                              setState(() => _trips[index]['passengers']--);
-                          },
-                          icon: Icon(Icons.remove_circle_outline, color: kPrimary, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                        Text('${trip['passengers']}',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        IconButton(
-                          onPressed: () => setState(() => _trips[index]['passengers']++),
-                          icon: Icon(Icons.add_circle_outline, color: kPrimary, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text('Nights', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                    SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            if (trip['nights'] > 0)
-                              setState(() => _trips[index]['nights']--);
-                          },
-                          icon: Icon(Icons.remove_circle_outline, color: kPrimary, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                        Text('${trip['nights']}',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        IconButton(
-                          onPressed: () => setState(() => _trips[index]['nights']++),
-                          icon: Icon(Icons.add_circle_outline, color: kPrimary, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-
-          // Accommodation type
-          Text('Accommodation', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            value: trip['accommodation'],
-            decoration: InputDecoration(isDense: true),
-            items: [
-              DropdownMenuItem(value: 'hotel', child: Text('Hotel')),
-              DropdownMenuItem(value: 'airbnb', child: Text('Airbnb / Holiday Let')),
-              DropdownMenuItem(value: 'camping', child: Text('Camping')),
-              DropdownMenuItem(value: 'homestay', child: Text('Staying with Friends/Family')),
-            ],
-            onChanged: (value) => setState(() => _trips[index]['accommodation'] = value!),
-          ),
-        ],
+  Widget _buildAddPetButton() {
+    return GestureDetector(
+      onTap: _showAddPetDialog,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(vertical: 32),
+        decoration: BoxDecoration(
+          border: Border.all(color: kPetsPurple, width: 2),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.add_circle_outline, color: kPetsPurple, size: 48),
+            SizedBox(height: 8),
+            Text('Add a pet', style: TextStyle(color: kPetsPurple, fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildUkStayCard() {
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('UK Stays', style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-          SizedBox(height: 4),
-          Text('Hotels, Airbnbs or B&Bs within the UK',
-              style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 12),
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
 
-          // Existing UK stays
-          ..._ukStays.asMap().entries.map((entry) {
-            int i = entry.key;
-            Map<String, dynamic> stay = entry.value;
-            return Container(
-              margin: EdgeInsets.only(bottom: 12),
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: kBackground,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: kBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Center(
-                        child: Text('Stay ${i + 1}',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          onPressed: () => setState(() => _ukStays.removeAt(i)),
-                          icon: Icon(Icons.close, color: kTextSubtle, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints()
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-
-                  // Type dropdown
-                  Text('Type', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                  SizedBox(height: 4),
-                  DropdownButtonFormField<String>(
-                    value: stay['type'],
-                    decoration: InputDecoration(isDense: true),
-                    items: [
-                      DropdownMenuItem(value: 'hotel', child: Text('Hotel / B&B')),
-                      DropdownMenuItem(value: 'airbnb', child: Text('Airbnb / Holiday Let')),
-                      DropdownMenuItem(value: 'camping', child: Text('Camping')),
-                      DropdownMenuItem(value: 'homestay', child: Text('Friends / Family')),
-                    ],
-                    onChanged: (value) => setState(() => _ukStays[i]['type'] = value!),
-                  ),
-                  SizedBox(height: 8),
-
-                  // People and nights
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text('People', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    if (stay['people'] > 1)
-                                      setState(() => _ukStays[i]['people']--);
-                                  },
-                                  icon: Icon(Icons.remove_circle_outline, color: kPrimary, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  constraints: BoxConstraints(),
-                                ),
-                                Text('${stay['people']}',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                IconButton(
-                                  onPressed: () => setState(() => _ukStays[i]['people']++),
-                                  icon: Icon(Icons.add_circle_outline, color: kPrimary, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  constraints: BoxConstraints(),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column( //arranges children vertically
-                          crossAxisAlignment: CrossAxisAlignment.center, //controls horizontal alignment
-                          children: [
-                            Text('Nights', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                            Row( // default to stretch and fill available width, with default being everything on the left, so need to center whats happening inside this
-                              mainAxisAlignment: MainAxisAlignment.center, //controls vertical alignment
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    if (stay['nights'] > 0)
-                                      setState(() => _ukStays[i]['nights']--);
-                                  },
-                                  icon: Icon(Icons.remove_circle_outline, color: kPrimary, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  constraints: BoxConstraints(),
-                                ),
-                                Text('${stay['nights']}',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                IconButton(
-                                  onPressed: () => setState(() => _ukStays[i]['nights']++),
-                                  icon: Icon(Icons.add_circle_outline, color: kPrimary, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  constraints: BoxConstraints(),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-
-          // Add UK stay button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _ukStays.add({'people': 1, 'nights': 1, 'type': 'hotel'});
-                });
-              },
-              icon: Icon(Icons.add, color: kPrimary),
-              label: Text('Add UK stay',
-                  style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 14),
-                side: BorderSide(color: kPrimary),
-                shape: StadiumBorder(),
-              ),
-            ),
-          ),
-        ],
+    return QuizFrame(
+      progress: 0.75,
+      question: 'Do you have any pets?',
+      answered: true,
+      accentColor: kPetsPurple,
+      backRoute: '/pet-intro',
+      onNext: () {
+        profile.pets = _pets;
+        profile.update();
+        context.go('/diet-intro');
+      },
+      answerContent: SingleChildScrollView(
+        child: Column(
+          children: [
+            ..._pets.asMap().entries.map((entry) {
+              final index = entry.key;
+              final pet = entry.value;
+              return PetCard(
+                pet: pet,
+                onChanged: (updated) => setState(() => _pets[index] = updated),
+                onRemove: () => setState(() => _pets.removeAt(index)),
+              );
+            }),
+            _buildAddPetButton(),
+          ],
+        ),
       ),
     );
   }
@@ -2234,8 +3756,8 @@ class _DietScreenState extends State<DietScreen> {
   int _rmDays = 0;  
   int _wmDays = 0;
   final _shoppingController = TextEditingController();
-  String _foodWaste;
-  String _normalWaste;
+  String? _foodWaste;
+  String? _normalWaste;
 
   @override
   void initState() {
@@ -2964,7 +4486,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
                   children: [
                     IconButton(
                       onPressed: () {
-                        if (_numPeople > 1) setState(() => _numPeople--);
+                        if (_numPeople != null && _numPeople! > 1) setState(() => _numPeople = _numPeople! - 1);
                       },
                       icon: Icon(Icons.remove_circle_outline),
                       color: kPrimary,
@@ -2976,7 +4498,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
                           fontSize: 24, fontWeight: FontWeight.bold, color: kText),
                     ),
                     IconButton(
-                      onPressed: () => setState(() => _numPeople++),
+                      onPressed: () => setState(() => _numPeople = (_numPeople ?? 0) + 1),
                       icon: Icon(Icons.add_circle_outline),
                       color: kPrimary,
                       iconSize: 32,

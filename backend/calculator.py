@@ -89,7 +89,9 @@ def calculate_total_emissions(profile: dict) -> dict:
     abroad_co2 = calculate_abroad_accomodation_emissions(
                     profile["flights"])
     uk_co2    = calculate_uk_accomodation_emissions(
-                    profile["uk_stays"])
+                    profile.get("uk_hotel_nights", 0),
+                    profile.get("uk_airbnb_nights", 0),
+                    num_people)
 
     # DIET
     red_meat_co2  = calculate_red_meat_emissions(

@@ -17,9 +17,12 @@ class ProfileStore extends ChangeNotifier {
   // ── Energy ─────────────────────────────────────────────
   double monthlyGasSpend = 0;
   String fuelType = 'natural_gas';
+  bool fuelTypeAnswered = false;
   double monthlyElecSpend = 0;
   double monthlySolarKwh = 0;
+  bool solarPanelsAnswered = false;
   String tariff = 'standard';
+  bool tariffAnswered = false;
   double monthlyWaterSpend = 0;
   bool? combinedBilling;
   double monthlyCombinedSpend = 0;
@@ -28,13 +31,19 @@ class ProfileStore extends ChangeNotifier {
   // ── Transport ──────────────────────────────────────────
   double weeklyMileage = 0;
   String carFuel = 'petrol';
+  bool carFuelTypeAnswered = false;
   String carSize = 'supermini';
   double monthlyBusSpend = 0;
   double monthlyTrainSpend = 0;
+  bool carSizeAnswered = false;
 
   // ── Flights & Accommodation ────────────────────────────
   List<Map<String, dynamic>> flights = [];
-  List<Map<String, dynamic>> ukStays = [];
+  String? currentTripCountry;
+  int? currentTripNights;
+  String? currentTripAccommodation;
+  double hotelNights = 0;
+  double airbnbNights = 0;
 
   // ── Diet ───────────────────────────────────────────────
   int rmDays = 0;
@@ -72,6 +81,7 @@ class ProfileStore extends ChangeNotifier {
 
   // ── Home Info Questions ───────────────────────────────────────────
   String hobType = 'gas';
+  bool hobTypeAnswered = false;
   int incandescentBulbs = 0;
   int cflBulbs = 0;
   int ledBulbs = 0;
@@ -122,7 +132,8 @@ class ProfileStore extends ChangeNotifier {
       'monthly_bus_spend':        monthlyBusSpend,
       'monthly_train_spend':      monthlyTrainSpend,
       'flights':                  flights,
-      'uk_stays':                 ukStays,
+      'hotel_nights':             hotelNights,
+      'airbnb_nights':            airbnbNights,
       'rm_days':                  rmDays,
       'wm_days':                  wmDays,
       'non_meat_spend':           nonMeatSpend,
@@ -176,6 +187,12 @@ class ProfileStore extends ChangeNotifier {
       ...toProfile(),
       'completed_actions': completedActions,
       'dismissed_actions': dismissedActions,
+      'solar_panels_answered': solarPanelsAnswered,
+      'fuel_type_answered': fuelTypeAnswered,
+      'hob_type_answered': hobTypeAnswered,
+      'tariff_answered': tariffAnswered,
+      'car_size_answered': carSizeAnswered,
+      'car_fuel_type_answered': carFuelTypeAnswered,
     };
   }
 
@@ -191,27 +208,30 @@ class ProfileStore extends ChangeNotifier {
 
     numPeople = (data['num_people'] as num?)?.toInt() ?? numPeople;
     monthlyGasSpend = _d(data['monthly_gas_spend'], monthlyGasSpend);
+    fuelTypeAnswered = data['fuel_type_answered'] as bool? ?? fuelTypeAnswered;
     fuelType = _s(data['fuel_type'], fuelType);
     monthlyElecSpend = _d(data['monthly_elec_spend'], monthlyElecSpend);
     monthlyCombinedSpend = _d(data['monthly_combined_spend'], monthlyCombinedSpend);
     combinedBilling = data['combined_billing'] as bool?;
     billingMonth = _i(data['billing_month'], billingMonth);
     tariff = _s(data['tariff'], tariff);
+    tariffAnswered = data['tariff_answered'] as bool? ?? tariffAnswered;
+    solarPanelsAnswered = data['solar_panels_answered'] as bool? ?? solarPanelsAnswered;
     monthlySolarKwh = _d(data['monthly_solar'], monthlySolarKwh);
     monthlyWaterSpend = _d(data['monthly_water_spend'], monthlyWaterSpend);
     weeklyMileage = _d(data['weekly_mileage'], weeklyMileage);
     carFuel = _s(data['car_fuel'], carFuel);
+    carFuelTypeAnswered = data['car_fuel_type_answered'] as bool? ?? carFuelTypeAnswered;
     carSize = _s(data['car_size'], carSize);
+    carSizeAnswered = data['car_size_answered'] as bool? ?? carSizeAnswered;
     monthlyBusSpend = _d(data['monthly_bus_spend'], monthlyBusSpend);
     monthlyTrainSpend = _d(data['monthly_train_spend'], monthlyTrainSpend);
+    hotelNights = _d(data['hotel_nights'], hotelNights);
+    airbnbNights = _d(data['airbnb_nights'], airbnbNights);
 
     if (data['flights'] != null) {
       flights = List<Map<String, dynamic>>.from(
           (data['flights'] as List).map((e) => Map<String, dynamic>.from(e)));
-    }
-    if (data['uk_stays'] != null) {
-      ukStays = List<Map<String, dynamic>>.from(
-          (data['uk_stays'] as List).map((e) => Map<String, dynamic>.from(e)));
     }
     if (data['pets'] != null) {
       pets = List<Map<String, dynamic>>.from(
@@ -241,6 +261,7 @@ class ProfileStore extends ChangeNotifier {
     savingSockets = _b(data['energy_saving_sockets'], savingSockets);
     solarPanels = _b(data['solar_panels'], solarPanels);
     batteryStorage = _b(data['battery_storage'], batteryStorage);
+    hobTypeAnswered = data['hob_type_answered'] as bool? ?? hobTypeAnswered;
     hobType = _s(data['hob_type'], hobType);
     incandescentBulbs = _i(data['incandescent_bulbs'], incandescentBulbs);
     cflBulbs = _i(data['cfl_bulbs'], cflBulbs);

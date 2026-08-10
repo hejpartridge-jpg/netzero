@@ -57,7 +57,7 @@ class DefaultFirebaseOptions {
     appId: '1:510538043459:web:7622586bd63f9547eb84f6',
     messagingSenderId: '510538043459',
     projectId: 'netzero-planner-d8a2f',
-    authDomain: 'netzero-planner-d8a2f.firebaseapp.com',
+    authDomain: 'netzero-planner-d8a2f.web.app',
     storageBucket: 'netzero-planner-d8a2f.firebasestorage.app',
     measurementId: 'G-KCSTJB8JSJ',
   );
