@@ -99,7 +99,7 @@ def calculate_total_emissions(profile: dict) -> dict:
     white_meat_co2 = calculate_white_meat_emissions(
                     profile["wm_days"], num_people)
     food_co2      = calculate_food_emissions(
-                    profile["non_meat_spend"])
+                    profile["non_meat_spend"], profile["rm_days"], profile["wm_days"], num_people)
     
     # WASTE
     food_waste_co2 = calculate_food_waste_emissions(
