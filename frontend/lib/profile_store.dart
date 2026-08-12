@@ -52,7 +52,9 @@ class ProfileStore extends ChangeNotifier {
 
   // ── Waste ──────────────────────────────────────────────
   String? foodWasteAction;
+  bool foodWasteAnswered = false;
   String? wasteAction;
+  bool wasteAnswered = false;
 
   // ── Pets ───────────────────────────────────────────────
   List<Map<String, dynamic>> pets = [];
@@ -132,8 +134,8 @@ class ProfileStore extends ChangeNotifier {
       'monthly_bus_spend':        monthlyBusSpend,
       'monthly_train_spend':      monthlyTrainSpend,
       'flights':                  flights,
-      'hotel_nights':             hotelNights,
-      'airbnb_nights':            airbnbNights,
+      'uk_hotel_nights':          hotelNights,
+      'uk_airbnb_nights':         airbnbNights,
       'rm_days':                  rmDays,
       'wm_days':                  wmDays,
       'non_meat_spend':           nonMeatSpend,
@@ -193,6 +195,8 @@ class ProfileStore extends ChangeNotifier {
       'tariff_answered': tariffAnswered,
       'car_size_answered': carSizeAnswered,
       'car_fuel_type_answered': carFuelTypeAnswered,
+      'waste_answered': wasteAnswered,
+      'food_waste_answered': foodWasteAnswered,
     };
   }
 
@@ -226,8 +230,8 @@ class ProfileStore extends ChangeNotifier {
     carSizeAnswered = data['car_size_answered'] as bool? ?? carSizeAnswered;
     monthlyBusSpend = _d(data['monthly_bus_spend'], monthlyBusSpend);
     monthlyTrainSpend = _d(data['monthly_train_spend'], monthlyTrainSpend);
-    hotelNights = _d(data['hotel_nights'], hotelNights);
-    airbnbNights = _d(data['airbnb_nights'], airbnbNights);
+    hotelNights = _d(data['uk_hotel_nights'], hotelNights);
+    airbnbNights = _d(data['uk_airbnb_nights'], airbnbNights);
 
     if (data['flights'] != null) {
       flights = List<Map<String, dynamic>>.from(
@@ -242,7 +246,9 @@ class ProfileStore extends ChangeNotifier {
     wmDays = _i(data['wm_days'], wmDays);
     nonMeatSpend = _d(data['non_meat_spend'], nonMeatSpend);
     foodWasteAction = data['food_waste_action'] as String? ?? foodWasteAction;
+    foodWasteAnswered = data['food_waste_answered'] as bool? ?? foodWasteAnswered;
     wasteAction = data['waste_action'] as String? ?? wasteAction;
+    wasteAnswered = data['waste_answered'] as bool? ?? wasteAnswered;
     monthlyTakeaway = _d(data['monthly_takeaway'], monthlyTakeaway);
     monthlyDrinks = _d(data['monthly_drinks'], monthlyDrinks);
     monthlyAlcohol = _d(data['monthly_alcohol'], monthlyAlcohol);

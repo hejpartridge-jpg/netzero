@@ -16,7 +16,7 @@ import 'package:flutter_earth_globe/globe_coordinates.dart';
 import 'package:flutter_globe_3d/flutter_globe_3d.dart';
 import 'dart:math';
 
-const bool kUnderConstruction = false;
+const bool kUnderConstruction = true;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,9 +81,14 @@ final _router = GoRouter(
     GoRoute(path: '/airbnb-nights', builder: (context, state) => AirbnbNightsScreen()),
     GoRoute(path: '/pets-intro', builder: (context, state) => PetsIntroScreen()),
     GoRoute(path: '/pets-question', builder: (context, state) => PetsQuestionScreen()),
+    GoRoute(path: '/diet-intro', builder: (context, state) => DietIntroScreen()),
+    GoRoute(path: '/weekly-shop', builder: (context, state) => WeeklyShopScreen()),
+    GoRoute(path: '/rm-days', builder: (context, state) => RMDaysScreen()),
+    GoRoute(path: '/wm-days', builder: (context, state) => WMDaysScreen()),
+    GoRoute(path: '/waste', builder: (context, state) => WasteScreen()),
+    GoRoute(path: '/food-waste', builder: (context, state) => FoodWasteScreen()),
     GoRoute(path: '/household',    builder: (context, state) => HouseholdScreen()),
     GoRoute(path: '/diet',         builder: (context, state) => DietScreen()),
-    GoRoute(path: '/pets',         builder: (context, state) => PetsScreen()),
     GoRoute(path: '/spending',     builder: (context, state) => SpendingScreen()),
     GoRoute(path: '/results',      builder: (context, state) => ResultsScreen()),
     GoRoute(path: '/login-reminder', builder: (context, state) => LoginReminderScreen()),
@@ -111,6 +116,17 @@ class NetZeroApp extends StatelessWidget {
       title: 'Net Zero Planner',
       routerConfig: _router,
       theme: buildTheme(),
+      builder: (context, child) {
+        return Container(
+          color: kBackground,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 480),
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -624,6 +640,7 @@ Widget buildTwoOptionBoxes({
 class QuizFrame extends StatefulWidget {
   final double progress; // 0.0 to 1.0
   final String question;
+  final String? subheading;
   final Widget answerContent;
   final bool answered;
   final VoidCallback onNext;
@@ -634,6 +651,7 @@ class QuizFrame extends StatefulWidget {
   const QuizFrame({
     required this.progress,
     required this.question,
+    this.subheading,
     required this.answerContent,
     required this.answered,
     required this.onNext,
@@ -727,6 +745,14 @@ class _QuizFrameState extends State<QuizFrame> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
                   textAlign: TextAlign.center,
                 ),
+                if (widget.subheading != null) ...[
+                  SizedBox(height: 8),
+                  Text(
+                    widget.subheading!,
+                    style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 Spacer(flex: 2),
                 widget.answerContent,
                 if (widget.motivationalMessage != null) ...[
@@ -774,14 +800,13 @@ class HoverRevealField extends StatefulWidget {
 }
 
 class _HoverRevealFieldState extends State<HoverRevealField> {
-  bool _hovering = false;
+  bool _open = false;
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: _hovering
+    return GestureDetector(
+      onTap: () => setState(() => _open = true),
+      child: _open
           ? Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
@@ -790,17 +815,21 @@ class _HoverRevealFieldState extends State<HoverRevealField> {
               ),
               child: widget.editorBuilder(context),
             )
-          : Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              child: Text(
-                widget.displayValue.isEmpty ? '—' : widget.displayValue,
-                style: TextStyle(color: kText),
+          : MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                child: Text(
+                  widget.displayValue.isEmpty ? '—' : widget.displayValue,
+                  style: TextStyle(color: kText),
+                ),
               ),
             ),
     );
   }
 }
 
+const Color kLavender = Color(0xFFF3EAFB);
 // ── Pet Card ───────────────────────────
 class PetCard extends StatefulWidget {
   final Map<String, dynamic> pet;
@@ -850,7 +879,7 @@ class _PetCardState extends State<PetCard> {
       margin: EdgeInsets.only(bottom: 16),
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: kSurface,
+        color: kLavender,
         border: Border.all(color: kPetsPurple, width: 1.5),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -883,7 +912,7 @@ class _PetCardState extends State<PetCard> {
             ),
           ),
           _row(
-            'Food',
+            'Food Type',
             HoverRevealField(
               displayValue: pet['food'] ?? '',
               editorBuilder: (context) => DropdownButton<String>(
@@ -925,7 +954,7 @@ class _PetCardState extends State<PetCard> {
             ),
           ),
           _row(
-            'Weight',
+            'Daily Weight Of Food',
             HoverRevealField(
               displayValue: pet['weight'] != null ? '${pet['weight']} kg' : '',
               editorBuilder: (context) => TextField(
@@ -2448,13 +2477,13 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
   static const Color kTransportBlue = Color(0xFF5B84A6);
 
   final List<Map<String, String>> _options = [
-    {'value': 'mini', 'label': 'Mini', 'image': 'assets/images/car_mini.png', 'description': 'e.g. Fiat 500, Smart Car'},
-    {'value': 'supermini', 'label': 'Supermini', 'image': 'assets/images/car_supermini.png', 'description': 'e.g. VW Polo, Ford Fiesta'},
-    {'value': 'lower_medium', 'label': 'Lower Medium', 'image': 'assets/images/car_lower_medium.png', 'description': 'e.g. VW Golf, Ford Focus'},
-    {'value': 'upper_medium', 'label': 'Upper Medium', 'image': 'assets/images/car_upper_medium.png', 'description': 'e.g. BMW 3 Series, Audi A4'},
-    {'value': 'executive', 'label': 'Executive', 'image': 'assets/images/car_executive.png', 'description': 'e.g. BMW 5 Series, Mercedes E-Class'},
-    {'value': 'luxury', 'label': 'Luxury', 'image': 'assets/images/car_luxury.png', 'description': 'e.g. Mercedes S-Class, Bentley'},
-    {'value': 'sports', 'label': 'Sports', 'image': 'assets/images/car_sports.png', 'description': 'e.g. Porsche 911, Mazda MX-5'},
+    {'value': 'mini', 'label': 'Very Small Car', 'image': 'assets/images/car_mini.png', 'description': 'e.g. Fiat 500, Smart Car'},
+    {'value': 'supermini', 'label': 'Small Car', 'image': 'assets/images/car_supermini.png', 'description': 'e.g. VW Polo, Ford Fiesta'},
+    {'value': 'lower_medium', 'label': 'Medium Car', 'image': 'assets/images/car_lower_medium.png', 'description': 'e.g. VW Golf, Ford Focus'},
+    {'value': 'upper_medium', 'label': 'Large Car', 'image': 'assets/images/car_upper_medium.png', 'description': 'e.g. BMW 3 Series, Audi A4'},
+    {'value': 'executive', 'label': 'Premium Car', 'image': 'assets/images/car_executive.png', 'description': 'e.g. BMW 5 Series, Mercedes E-Class'},
+    {'value': 'luxury', 'label': 'Luxury Car', 'image': 'assets/images/car_luxury.png', 'description': 'e.g. Mercedes S-Class, Bentley'},
+    {'value': 'sports', 'label': 'Sports Car', 'image': 'assets/images/car_sports.png', 'description': 'e.g. Porsche 911, Mazda MX-5'},
     {'value': 'dual_purpose', 'label': 'SUV / 4x4', 'image': 'assets/images/car_suv.png', 'description': 'e.g. Toyota RAV4, VW Tiguan'},
     {'value': 'mpv', 'label': 'People Carrier', 'image': 'assets/images/car_mpv.png', 'description': 'e.g. Ford Galaxy, VW Sharan'},
   ];
@@ -2982,13 +3011,16 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
   String? _selectedAccommodation;
   int? _selectedPeople;
   Offset _dragOffset = Offset.zero;
+  int? _editingIndex;
+  double? _currentCo2;
+  bool _showTripsList = false;
 
   @override
   void initState() {
     super.initState();
     _controller = EarthController();
     _controller.setLightMode(EarthLightMode.followCamera);
-    _controller.enableAutoRotate = false;
+    _controller.enableAutoRotate = true;
 
     _nightsController.addListener(() {
       setState(() => _hasNights = _nightsController.text.trim().isNotEmpty);
@@ -3009,19 +3041,31 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
         ),
       );
     }
+
+    _fetchLiveTotal();
+  }
+
+  Future<void> _fetchLiveTotal() async {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    try {
+      final response = await http.post(
+        Uri.parse('https://netzero-production.up.railway.app/calculate'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(profile.toProfile()),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() => _currentCo2 = (data['total_kg_co2e'] as num).toDouble());
+      }
+    } catch (e) {
+      // silently ignore
+    }
   }
 
   void _onRegionTapped(double lat, double lon) {
     _controller.enableAutoRotate = false;
     _controller.setCameraFocus(lat, lon);
-
-    Future.delayed(Duration(milliseconds: 100), () {
-      if (mounted) {
-        _controller.setCameraFocus(lat, lon);
-        _controller.setZoom(2.0);
-      }
-    });
-
+    _controller.setZoom(2.0);
     setState(() {
       _countryOptions = findNearbyCountries(lat, lon);
       _step = _TripStep.countryList;
@@ -3037,15 +3081,20 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
 
   void _saveTrip() {
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    profile.flights.add({
+    final tripData = {
       'country': _selectedCountry,
       'nights': int.tryParse(_nightsController.text) ?? 0,
       'accommodation': _selectedAccommodation,
       'passengers': _selectedPeople,
       'seat': 'economy',
-    });
+    };
+    if (_editingIndex != null) {
+      profile.flights[_editingIndex!] = tripData;
+    } else {
+      profile.flights.add(tripData);
+    }
     profile.update();
-    _controller.enableAutoRotate = false;
+    _controller.enableAutoRotate = true;
     _controller.setZoom(1.0);
     setState(() {
       _step = _TripStep.none;
@@ -3053,7 +3102,32 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
       _nightsController.clear();
       _selectedAccommodation = null;
       _selectedPeople = null;
+      _editingIndex = null;
     });
+    _fetchLiveTotal();
+  }
+
+  void _editTrip(int index) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final trip = profile.flights[index];
+    setState(() {
+      _selectedCountry = trip['country'];
+      _nightsController.text = trip['nights'].toString();
+      _hasNights = true;
+      _selectedAccommodation = trip['accommodation'];
+      _selectedPeople = trip['passengers'];
+      _editingIndex = index;
+      _step = _TripStep.nights;
+    });
+  }
+
+  void _removeTrip(int index) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    setState(() {
+      profile.flights.removeAt(index);
+    });
+    profile.update();
+    _fetchLiveTotal();
   }
 
   @override
@@ -3061,6 +3135,49 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
     _controller.dispose();
     _nightsController.dispose();
     super.dispose();
+  }
+
+  Widget _buildTripsList() {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.flights.isEmpty) return SizedBox.shrink();
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: 200),
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: profile.flights.length,
+        itemBuilder: (context, index) {
+          final trip = profile.flights[index];
+          return ListTile(
+            dense: true,
+            title: Text('${trip['country']}', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              '${trip['nights']} nights • ${trip['accommodation']} • ${trip['passengers']} people',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.edit, color: kFlightsGreen, size: 20),
+                  onPressed: () => _editTrip(index),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  onPressed: () => _removeTrip(index),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildOverlayPanel() {
@@ -3093,7 +3210,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  _controller.enableAutoRotate = false;
+                  _controller.enableAutoRotate = true;
                   _controller.setZoom(1.0);
                   setState(() => _step = _TripStep.none);
                 },
@@ -3117,12 +3234,12 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
               Align(
                 alignment: Alignment.topLeft,
                 child: IconButton(
-                  icon: Icon(Icons.arrow_back, color: kText),
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => setState(() => _step = _TripStep.countryList),
                 ),
               ),
               Text('How many nights in $_selectedCountry?',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                   textAlign: TextAlign.center),
               SizedBox(height: 16),
               TextField(
@@ -3130,14 +3247,19 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*'))],
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(hintText: 'e.g. 7'),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kText),
+                decoration: InputDecoration(
+                  hintText: 'e.g. 7',
+                  hintStyle: TextStyle(color: kText),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white70)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                ),
               ),
               SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _hasNights ? () => setState(() => _step = _TripStep.accommodation) : null,
                 style: ElevatedButton.styleFrom(backgroundColor: kFlightsGreen),
-                child: Text('Next →'),
+                child: Text('Next →', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -3157,12 +3279,12 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
               Align(
                 alignment: Alignment.topLeft,
                 child: IconButton(
-                  icon: Icon(Icons.arrow_back, color: kText),
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => setState(() => _step = _TripStep.nights),
                 ),
               ),
               Text('Where did you stay in $_selectedCountry?',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                   textAlign: TextAlign.center),
               SizedBox(height: 16),
               buildSingleSelectOptions(
@@ -3171,6 +3293,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                   _selectedAccommodation = value;
                   _step = _TripStep.people;
                 }),
+                accentColor: kFlightsGreen,
                 options: [
                   {'value': 'hotel', 'label': 'Hotel', 'icon': Icons.hotel},
                   {'value': 'airbnb', 'label': 'Airbnb / Rental', 'icon': Icons.house},
@@ -3196,12 +3319,12 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
               Align(
                 alignment: Alignment.topLeft,
                 child: IconButton(
-                  icon: Icon(Icons.arrow_back, color: kText),
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () => setState(() => _step = _TripStep.accommodation),
                 ),
               ),
               Text('How many people from your household went?',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                   textAlign: TextAlign.center),
               SizedBox(height: 16),
               Row(
@@ -3215,7 +3338,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                     },
                     icon: Icon(Icons.remove_circle_outline, color: kFlightsGreen),
                   ),
-                  Text(_selectedPeople?.toString() ?? '–', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                  Text(_selectedPeople?.toString() ?? '–', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
                   IconButton(
                     onPressed: () => setState(() => _selectedPeople = (_selectedPeople ?? 0) + 1),
                     icon: Icon(Icons.add_circle_outline, color: kFlightsGreen),
@@ -3226,7 +3349,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
               ElevatedButton(
                 onPressed: _selectedPeople == null ? null : _saveTrip,
                 style: ElevatedButton.styleFrom(backgroundColor: kFlightsGreen),
-                child: Text('Save Trip'),
+                child: Text(_editingIndex != null ? 'Update Trip' : 'Save Trip', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -3247,7 +3370,25 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
           icon: Icon(Icons.arrow_back, color: kText),
           onPressed: () => context.go('/flights-intro'),
         ),
+        title: Text(
+          'Your recent holidays',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText),
+        ),
+        centerTitle: true,
         actions: [
+          if (_currentCo2 != null)
+            Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Center(
+                child: Row(
+                  children: [
+                    Icon(Icons.eco, color: kFlightsGreen, size: 18),
+                    SizedBox(width: 4),
+                    Text('${_currentCo2!.toStringAsFixed(0)} kg', style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
+                  ],
+                ),
+              ),
+            ),
           _authBarButton(context, accentColor: kFlightsGreen),
           SizedBox(width: 8),
         ],
@@ -3258,13 +3399,6 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
             Center(
               child: GestureDetector(
                 onPanStart: (_) => _controller.enableAutoRotate = false,
-                onPanUpdate: (details) {
-                  _dragOffset += details.delta;
-                  _controller.setOffset(_dragOffset);
-                },
-                onPanEnd: (_) {
-                  _controller.setOffset(_dragOffset);
-                },
                 child: Earth3D(
                   controller: _controller,
                   texture: const AssetImage('assets/images/2k_earth-day.jpg'),
@@ -3277,17 +3411,31 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                 left: 24,
                 right: 24,
                 bottom: 32,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/uk-intro'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kFlightsGreen,
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_showTripsList) _buildTripsList(),
+                    if (Provider.of<ProfileStore>(context, listen: false).flights.isNotEmpty)
+                      TextButton(
+                        onPressed: () => setState(() => _showTripsList = !_showTripsList),
+                        child: Text(
+                          _showTripsList ? 'Hide trips' : 'See trips',
+                          style: TextStyle(color: kFlightsGreen, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/uk-intro'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kFlightsGreen,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('No more trips →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
                     ),
-                    child: Text('No more trips →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
+                  ],
                 ),
               ),
             if (_step != _TripStep.none)
@@ -3501,7 +3649,7 @@ class _AirbnbNightsScreenState extends State<AirbnbNightsScreen> {
       onNext: () {
         profile.airbnbNights = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/pet-intro');
+        context.go('/pets-intro');
       },
       answerContent: Column(
         children: [
@@ -3554,7 +3702,7 @@ class _AirbnbNightsScreenState extends State<AirbnbNightsScreen> {
   }
 }
 
-const Color kPetsPurple = Color(0xFFA351DD);
+const Color kPetsPurple = Color(0xFFB660F3);
 // ── Pets Section Intro ───────────────────────────────────────────────
 class PetsIntroScreen extends StatelessWidget {
   @override
@@ -3607,7 +3755,7 @@ class PetsIntroScreen extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () => context.go('/pets-question'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: kTripsRed,
+                          backgroundColor: kPetsPurple,
                           padding: EdgeInsets.symmetric(vertical: 18),
                           shape: StadiumBorder(),
                         ),
@@ -3644,32 +3792,43 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
   void _showAddPetDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('What type of pet?'),
-        content: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            GestureDetector(
-              onTap: () => _addPet('dog'),
-              child: Column(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 280,
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('What type of pet?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText)),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Icon(Icons.pets, color: kPetsPurple, size: 48),
-                  SizedBox(height: 8),
-                  Text('Dog', style: TextStyle(color: kText, fontWeight: FontWeight.bold)),
+                  GestureDetector(
+                    onTap: () => _addPet('dog'),
+                    child: Column(
+                      children: [
+                        Icon(Icons.pets, color: kPetsPurple, size: 40),
+                        SizedBox(height: 6),
+                        Text('Dog', style: TextStyle(color: kText, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => _addPet('cat'),
+                    child: Column(
+                      children: [
+                        Icon(Icons.pets, color: kPetsPurple, size: 40),
+                        SizedBox(height: 6),
+                        Text('Cat', style: TextStyle(color: kText, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
-            GestureDetector(
-              onTap: () => _addPet('cat'),
-              child: Column(
-                children: [
-                  Icon(Icons.pets, color: kPetsPurple, size: 48),
-                  SizedBox(height: 8),
-                  Text('Cat', style: TextStyle(color: kText, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -3719,27 +3878,481 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
       question: 'Do you have any pets?',
       answered: true,
       accentColor: kPetsPurple,
-      backRoute: '/pet-intro',
+      backRoute: '/pets-intro',
       onNext: () {
         profile.pets = _pets;
         profile.update();
         context.go('/diet-intro');
       },
-      answerContent: SingleChildScrollView(
-        child: Column(
-          children: [
-            ..._pets.asMap().entries.map((entry) {
-              final index = entry.key;
-              final pet = entry.value;
-              return PetCard(
-                pet: pet,
-                onChanged: (updated) => setState(() => _pets[index] = updated),
-                onRemove: () => setState(() => _pets.removeAt(index)),
-              );
-            }),
-            _buildAddPetButton(),
-          ],
+      answerContent: SizedBox(
+        height: 400,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              ..._pets.asMap().entries.map((entry) {
+                final index = entry.key;
+                final pet = entry.value;
+                return PetCard(
+                  pet: pet,
+                  onChanged: (updated) => setState(() => _pets[index] = updated),
+                  onRemove: () => setState(() => _pets.removeAt(index)),
+                );
+              }),
+              _buildAddPetButton(),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+const Color kDietOrange = Color(0xFFDC983F);
+// ── Diet Section Intro ───────────────────────────────────────────────
+class DietIntroScreen extends StatelessWidget {
+  @override
+
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/pets-question'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kDietOrange),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Stack(
+            children: [
+              Positioned(
+                top: 60,
+                right: 24,
+                child: Transform.rotate(
+                  angle: -0.4,
+                  child: Icon(Icons.restaurant, color: kDietOrange, size: 90),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Diet and Waste',
+                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Your food\'s footprint',
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/rm-days'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kDietOrange,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Let\'s Go →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──── Red Meat Question ────────────────────────────────────────────────
+class RMDaysScreen extends StatefulWidget {
+  @override
+  _RMDaysScreenState createState() => _RMDaysScreenState();
+}
+
+class _RMDaysScreenState extends State<RMDaysScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.rmDays > 0) {
+      _controller.text = profile.rmDays.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.6,
+      question: 'How many days a week do you eat red meat?',
+      subheading: '(e.g. beef or pork)',
+      answered: _hasValue,
+      backRoute: '/diet-intro',
+      accentColor: kDietOrange,
+      onNext: () {
+        profile.rmDays = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/wm-days');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '1',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  (double.tryParse(_controller.text) ?? 0) == 1 ? 'day' : 'days',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──── White Meat Question ────────────────────────────────────────────────
+class WMDaysScreen extends StatefulWidget {
+  @override
+  _WMDaysScreenState createState() => _WMDaysScreenState();
+}
+
+class _WMDaysScreenState extends State<WMDaysScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.wmDays > 0) {
+      _controller.text = profile.wmDays.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.62,
+      question: 'How many days a week do you eat white meat?',
+      subheading: '(e.g. chicken or fish)',
+      answered: _hasValue,
+      backRoute: '/rm-spend',
+      accentColor: kDietOrange,
+      onNext: () {
+        profile.wmDays = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/weekly-shop');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '3',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  (double.tryParse(_controller.text) ?? 0) == 1 ? 'day' : 'days',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──── Weekly Shop Question ────────────────────────────────────────────────
+class WeeklyShopScreen extends StatefulWidget {
+  @override
+  _WeeklyShopScreenState createState() => _WeeklyShopScreenState();
+}
+
+class _WeeklyShopScreenState extends State<WeeklyShopScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.nonMeatSpend > 0) {
+      _controller.text = profile.nonMeatSpend.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.64,
+      question: 'Roughly how much do you spend on your weekly shop?',
+      answered: _hasValue,
+      backRoute: '/wm-days',
+      accentColor: kDietOrange,
+      onNext: () {
+        profile.nonMeatSpend = double.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/waste');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text(
+                    'e.g.',
+                    style: TextStyle(fontSize: 20, color: kText),
+                  ),
+                Text(
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '60',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Waste Question ───────────────────────────────────────────────
+class WasteScreen extends StatefulWidget {
+  @override
+  _WasteScreenState createState() => _WasteScreenState();
+}
+
+class _WasteScreenState extends State<WasteScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.wasteAnswered ? profile.wasteAction : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.66,
+      question: 'What do you do with your rubbish?',
+      answered: _selected != null,
+      backRoute: '/weekly-shop',
+      accentColor: kDietOrange,
+      onNext: () {
+        profile.wasteAction = _selected!;
+        profile.wasteAnswered = true;
+        profile.update();
+        context.go('/food-waste');
+      },
+      answerContent: buildSingleSelectOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        accentColor: kDietOrange,
+        options: [
+          {
+            'value': 'recycle',
+            'label': 'I recycle wherever possible',
+            'icon': Icons.recycling,
+          },
+          {
+            'value': 'non_recycle',
+            'label': 'I hardly ever recycle',
+            'icon': Icons.delete,
+          },
+          {
+            'value': 'upcycle',
+            'label': 'I upcycle where possible, and recycle if I can\'t',
+            'icon': Icons.checkroom,
+          },
+        ],
+      ),
+    );
+  }
+}
+
+// ── Food Waste Question ───────────────────────────────────────────────
+class FoodWasteScreen extends StatefulWidget {
+  @override
+  _FoodWasteScreenState createState() => _FoodWasteScreenState();
+}
+
+class _FoodWasteScreenState extends State<FoodWasteScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.foodWasteAnswered ? profile.foodWasteAction : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.68,
+      question: 'What do you do with your food waste?',
+      answered: _selected != null,
+      backRoute: '/waste',
+      accentColor: kDietOrange,
+      onNext: () {
+        profile.foodWasteAction = _selected!;
+        profile.foodWasteAnswered = true;
+        profile.update();
+        context.go('/spending-intro');
+      },
+      answerContent: buildSingleSelectOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        accentColor: kDietOrange,
+        options: [
+          {
+            'value': 'bin',
+            'label': 'I put it in the normal bin',
+            'icon': Icons.delete,
+          },
+          {
+            'value': 'compost',
+            'label': 'I try to compost it',
+            'icon': Icons.compost,
+          },
+        ],
       ),
     );
   }
@@ -3956,251 +4569,6 @@ class _DietScreenState extends State<DietScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Pets Screen ────────────────────────────────────────────────────────────
-class PetsScreen extends StatefulWidget {
-  @override
-  _PetsScreenState createState() => _PetsScreenState();
-}
-
-class _PetsScreenState extends State<PetsScreen> {
-  List<Map<String, dynamic>> _pets = [];
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = Provider.of<ProfileStore>(context, listen: false);
-    _pets = profile.pets.map((pet) => Map<String, dynamic>.from(pet)).toList();
-  }
-
-  void _addPet() {
-    setState(() {
-      _pets.add({
-        'type': 'dog',
-        'food': 'dry',
-        'brand': 'standard',
-        'diet': 'meaty',
-        'weight': 0,
-      });
-    });
-  }
-
-  void _removePet(int index) {
-    setState(() => _pets.removeAt(index));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/diet'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-
-                SizedBox(height: 0),
-                Text(
-                  'Pets',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-                progressBar(0.7),
-                SizedBox(height: 24),
-
-                Text(
-                  'What pets do you have?',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Add each pet separately.',
-                  style: TextStyle(color: kTextSubtle),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 24),
-
-                // Scrollable list of trips + UK stays
-                Expanded(
-                  child: ListView(
-                    children: [
-
-                      // Pets
-                      ..._pets.asMap().entries.map((entry) {
-                        int i = entry.key;
-                        Map<String, dynamic> pet = entry.value;
-                        return _buildPetCard(i, pet);
-                      }).toList(),
-
-                      // Add pet button
-                      SizedBox(height: 4),
-                      OutlinedButton.icon(
-                        onPressed: _addPet,
-                        icon: Icon(Icons.add, color: kPrimary),
-                        label: Text('Add a pet',
-                            style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600)),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: kPrimary),
-                          shape: StadiumBorder(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 16),
-
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      profile.pets = _pets;
-                      profile.update();
-                      context.go('/spending');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPetCard(int index, Map<String, dynamic> pet) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-
-          // Header with remove button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Pet ${index + 1}',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-              IconButton(
-                onPressed: () => _removePet(index),
-                icon: Icon(Icons.close, color: kTextSubtle, size: 20),
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-
-          // Species dropdown
-          Text('Species', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            value: pet['type'],
-            decoration: InputDecoration(isDense: true),
-            items: [
-              DropdownMenuItem(value: 'dog', child: Text('Dog')),
-              DropdownMenuItem(value: 'cat', child: Text('Cat')),
-            ],
-            onChanged: (value) => setState(() => _pets[index]['type'] = value!),
-          ),
-          SizedBox(height: 8),
-
-          // Food type dropdown
-          Text('What food does your pet mostly eat?', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            value: pet['food'],
-            decoration: InputDecoration(isDense: true),
-            items: [
-              DropdownMenuItem(value: 'wet', child: Text('Wet')),
-              DropdownMenuItem(value: 'dry', child: Text('Dry')),
-            ],
-            onChanged: (value) => setState(() => _pets[index]['food'] = value!),
-          ),
-          SizedBox(height: 8),
-
-          // Brand dropdown
-          Text('What brand of food do you give your pet?', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            value: pet['brand'],
-            decoration: InputDecoration(isDense: true),
-            items: [
-              DropdownMenuItem(value: 'premium', child: Text('Premium')),
-              DropdownMenuItem(value: 'standard', child: Text('Standard')),
-            ],
-            onChanged: (value) => setState(() => _pets[index]['brand'] = value!),
-          ),
-          SizedBox(height: 8),
-
-          // Diet dropdown
-          Text('Diet', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          DropdownButtonFormField<String>(
-            value: pet['diet'],
-            decoration: InputDecoration(isDense: true),
-            items: [
-              DropdownMenuItem(value: 'meaty', child: Text('Meat-based')),
-              DropdownMenuItem(value: 'vegan', child: Text('Vegan')),
-            ],
-            onChanged: (value) => setState(() => _pets[index]['diet'] = value!),
-          ),
-          SizedBox(height: 8),
-
-          // Daily food weight
-          Text('Daily food amount (grams)',
-              style: TextStyle(fontSize: 12, color: kTextSubtle)),
-          SizedBox(height: 4),
-          TextField(
-            controller: TextEditingController(
-                text: pet['weight'] == 0 ? '' : pet['weight'].toString()),
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'e.g. 500g',
-              suffixText: 'per day',
-            ),
-            onChanged: (value) =>
-                setState(() => _pets[index]['weight'] = int.tryParse(value) ?? 0),
-          ),
-        ],
       ),
     );
   }

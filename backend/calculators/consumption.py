@@ -34,11 +34,16 @@ def calculate_white_meat_emissions(wm_days: float, num_people: int) -> float:
         raise ValueError("white meat factor not found in emission factors")
     return factor * wm_days * num_people * 52
 
-def calculate_food_emissions(non_meat_spend: float) -> float:
+def calculate_food_emissions(non_meat_spend: float, rm_days: float, wm_days: float, num_people: int) -> float:
     factor = SPEND_FACTORS.get("food_non_meat")
     if factor is None:
         raise ValueError("food factor not found in emission factors")
-    return factor * 52 * non_meat_spend
+    rm_spend = rm_days * 1.038 * num_people
+    wm_spend = wm_days * 0.769 * num_people
+    actual_nm_spend = max(0, non_meat_spend - rm_spend - wm_spend)
+    # I am keeping the same non_meat_spend variable purely for ease and not having to name change
+    # the non_meat_spend represents the total weekly shop and then I subtract the average amount spent on meat
+    return factor * 52 * actual_nm_spend
 
 # ── Food waste emissions ──────────────────────────────────────────────────
 def calculate_food_waste_emissions(action: str, num_people: int) -> float:
