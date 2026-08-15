@@ -23,14 +23,20 @@ def calculate_train_emissions(monthly_spend: float) -> float:
 
 
 # ── Car emissions ─────────────────────────────────────────────────────
-def calculate_car_emissions(weekly_mileage: float, _fuel: str, _size: str) -> float:
-    #nested function, so you have to call .get() in two goes
-    # .get() only gets one thing at a time, so you filter for fuel first and then size
-    fuel_dict = CAR_FACTORS.get(_fuel)
-    factor = fuel_dict.get(_size)
-    if factor is None:
-        raise ValueError(f"Unknown car size or fuel type")
-    return weekly_mileage * 52 * factor
+def calculate_car_emissions(cars: list) -> float:
+    total_co2 = 0
+    for car in cars:
+        weekly_mileage = car.get("mileage", 0)
+        fuel = car.get("fuel")
+        size = car.get("size")
+        fuel_dict = CAR_FACTORS.get(fuel)
+        if fuel_dict is None:
+            raise ValueError(f"Unknown car fuel type: '{fuel}'")
+        factor = fuel_dict.get(size)
+        if factor is None:
+            raise ValueError(f"Unknown car size: '{size}' for fuel type '{fuel}'")
+        total_co2 += weekly_mileage * 52 * factor
+    return total_co2
 
 # ── Flight emissions ──────────────────────────────────────────────────
 def calculate_flight_emissions(flights: list) -> float:

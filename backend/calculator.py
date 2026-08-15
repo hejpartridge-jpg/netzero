@@ -76,18 +76,13 @@ def calculate_total_emissions(profile: dict) -> dict:
                     profile["annual_water_m3"])
 
     # TRANSPORT
-    car_co2   = calculate_car_emissions(
-                    profile["weekly_mileage"],
-                    profile["car_fuel"],
-                    profile["car_size"])
+    car_co2   = calculate_car_emissions(profile.get("cars", []))
     bus_co2   = calculate_bus_emissions(
                     profile["monthly_bus_spend"])
     train_co2 = calculate_train_emissions(
                     profile["monthly_train_spend"])
-    flight_co2 = calculate_flight_emissions(
-                    profile["flights"])
-    abroad_co2 = calculate_abroad_accomodation_emissions(
-                    profile["flights"])
+    flight_co2 = calculate_flight_emissions(profile.get("flights", []))
+    abroad_co2 = calculate_abroad_accomodation_emissions(profile.get("flights", []))
     uk_co2    = calculate_uk_accomodation_emissions(
                     profile.get("uk_hotel_nights", 0),
                     profile.get("uk_airbnb_nights", 0),
@@ -108,8 +103,7 @@ def calculate_total_emissions(profile: dict) -> dict:
                     profile["waste_action"], num_people)
 
     # PETS
-    pet_co2 = calculate_pet_food_emissions(
-                    profile["pets"])
+    pet_co2 = calculate_pet_food_emissions(profile.get("pets", []))
 
     # SPENDING
     takeaway_co2   = calculate_takeaway_emissions(profile["monthly_takeaway"])

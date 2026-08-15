@@ -87,9 +87,12 @@ final _router = GoRouter(
     GoRoute(path: '/wm-days', builder: (context, state) => WMDaysScreen()),
     GoRoute(path: '/waste', builder: (context, state) => WasteScreen()),
     GoRoute(path: '/food-waste', builder: (context, state) => FoodWasteScreen()),
-    GoRoute(path: '/household',    builder: (context, state) => HouseholdScreen()),
-    GoRoute(path: '/diet',         builder: (context, state) => DietScreen()),
-    GoRoute(path: '/spending',     builder: (context, state) => SpendingScreen()),
+    GoRoute(path: '/spending-intro', builder: (context, state) => SpendingIntroScreen()),
+    GoRoute(path: '/spending-hub', builder: (context, state) => SpendingHubScreen()),
+    GoRoute(
+      path: '/spending/:key',
+      builder: (context, state) => SpendingCategoryScreen(categoryKey: state.pathParameters['key']!),
+    ),
     GoRoute(path: '/results',      builder: (context, state) => ResultsScreen()),
     GoRoute(path: '/login-reminder', builder: (context, state) => LoginReminderScreen()),
     GoRoute(path: '/phase2',       builder: (context, state) => Phase2Screen()),
@@ -647,6 +650,7 @@ class QuizFrame extends StatefulWidget {
   final String backRoute;
   final String? motivationalMessage;
   final Color accentColor;
+  final String nextLabel;
 
   const QuizFrame({
     required this.progress,
@@ -658,6 +662,7 @@ class QuizFrame extends StatefulWidget {
     required this.backRoute,
     this.motivationalMessage,
     this.accentColor = kPrimary,
+    this.nextLabel = 'Next →',
   });
 
   @override
@@ -774,7 +779,7 @@ class _QuizFrameState extends State<QuizFrame> {
                         padding: EdgeInsets.symmetric(vertical: 18),
                         shape: StadiumBorder(),
                       ),
-                      child: Text('Next →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      child: Text(widget.nextLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                   )
                 else
@@ -792,8 +797,13 @@ class _QuizFrameState extends State<QuizFrame> {
 class HoverRevealField extends StatefulWidget {
   final String displayValue;
   final Widget Function(BuildContext context) editorBuilder;
+  final bool autoCloseOnChange;
 
-  const HoverRevealField({required this.displayValue, required this.editorBuilder});
+  const HoverRevealField({
+    required this.displayValue,
+    required this.editorBuilder,
+    this.autoCloseOnChange = true,
+  });
 
   @override
   _HoverRevealFieldState createState() => _HoverRevealFieldState();
@@ -801,6 +811,16 @@ class HoverRevealField extends StatefulWidget {
 
 class _HoverRevealFieldState extends State<HoverRevealField> {
   bool _open = false;
+
+  @override
+  void didUpdateWidget(HoverRevealField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autoCloseOnChange &&
+        widget.displayValue != oldWidget.displayValue &&
+        widget.displayValue.isNotEmpty) {
+      setState(() => _open = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -903,6 +923,7 @@ class _PetCardState extends State<PetCard> {
             'Name',
             HoverRevealField(
               displayValue: pet['name'] ?? '',
+              autoCloseOnChange: false,
               editorBuilder: (context) => TextField(
                 controller: _nameController,
                 style: TextStyle(color: kText),
@@ -940,7 +961,7 @@ class _PetCardState extends State<PetCard> {
             ),
           ),
           _row(
-            'Diet',
+            'Diet Type',
             HoverRevealField(
               displayValue: pet['diet'] ?? '',
               editorBuilder: (context) => DropdownButton<String>(
@@ -957,6 +978,7 @@ class _PetCardState extends State<PetCard> {
             'Daily Weight Of Food',
             HoverRevealField(
               displayValue: pet['weight'] != null ? '${pet['weight']} kg' : '',
+              autoCloseOnChange: false,
               editorBuilder: (context) => TextField(
                 controller: _weightController,
                 keyboardType: TextInputType.number,
@@ -971,6 +993,26 @@ class _PetCardState extends State<PetCard> {
     );
   }
 }
+
+// ── Spending Keys ───────────────────────────
+const Color kSpendingBlue = Color(0xFFA0C7E7);
+
+const List<Map<String, dynamic>> spendingCategories = [
+  {'key': 'takeaway', 'label': 'Takeaway', 'icon': Icons.fastfood, 'period': 'month'},
+  {'key': 'drinks', 'label': 'Soft Drinks', 'icon': Icons.local_drink, 'period': 'month'},
+  {'key': 'alcohol', 'label': 'Alcohol', 'icon': Icons.wine_bar, 'period': 'month'},
+  {'key': 'tobacco', 'label': 'Tobacco', 'icon': Icons.smoking_rooms, 'period': 'month'},
+  {'key': 'clothes', 'label': 'Clothes', 'icon': Icons.checkroom, 'period': 'month'},
+  {'key': 'soap', 'label': 'Soap & Detergents', 'icon': Icons.soap, 'period': 'month'},
+  {'key': 'medicine', 'label': 'Medicine', 'icon': Icons.medication, 'period': 'month'},
+  {'key': 'electronics', 'label': 'Electronics', 'icon': Icons.devices, 'period': 'year'},
+  {'key': 'machinery', 'label': 'Machinery', 'icon': Icons.build, 'period': 'year'},
+  {'key': 'education', 'label': 'Education', 'icon': Icons.school, 'period': 'month'},
+  {'key': 'healthcare', 'label': 'Healthcare', 'icon': Icons.local_hospital, 'period': 'month'},
+  {'key': 'care', 'label': 'Care Homes', 'icon': Icons.elderly, 'period': 'month'},
+  {'key': 'furniture', 'label': 'Furniture', 'icon': Icons.chair, 'period': 'year'},
+  {'key': 'services', 'label': 'Services', 'icon': Icons.miscellaneous_services, 'period': 'month'},
+];
 
 // ── Under Construction Screen ─────────────────────────────────────────────
 class UnderConstructionScreen extends StatelessWidget {
@@ -1674,7 +1716,7 @@ class _NumPeopleScreenState extends State<NumPeopleScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.01,
+      progress: 0.0625,
       question: 'How many people live in your household?',
       answered: _numPeople != null,
       backRoute: '/energy-intro',
@@ -1733,7 +1775,7 @@ class _SolarPanelsScreenState extends State<SolarPanelsScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.02,
+      progress: 0.09375,
       question: 'Do you have solar panels?',
       answered: _selected != null,
       backRoute: '/num-people',
@@ -1783,7 +1825,7 @@ class _SolarUsageScreenState extends State<SolarUsageScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.04,
+      progress: 0.125,
       question: 'How much electricity did you use last month from your solar panels?',
       answered: _hasValue,
       backRoute: '/solar',
@@ -1870,7 +1912,7 @@ class _HeatingFuelScreenState extends State<HeatingFuelScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.06,
+      progress: 0.15625,
       question: 'What type of heating fuel do you use?',
       answered: _selected != null,
       backRoute: profile.solarPanels ? '/solar-usage' : '/solar',
@@ -1928,7 +1970,7 @@ class _HobTypeScreenState extends State<HobTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.08,
+      progress: 0.1875,
       question: 'What type of hob do you cook with?',
       answered: _selected != null, //for answered to be true, selected has to not equal null. It depends on selected
       backRoute: '/heating-fuel',
@@ -1973,7 +2015,7 @@ class _CombinedBillingScreenState extends State<CombinedBillingScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.1,
+      progress: 0.21875,
       question: 'Do you get one combined bill for gas and electricity, or separate bills?',
       answered: _selected != null,
       backRoute: '/hob-type',
@@ -2026,7 +2068,7 @@ class _CombinedSpendScreenState extends State<CombinedSpendScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.12,
+      progress: 0.25,
       question: 'What did you spend last month on your combined gas & electricity bill?',
       answered: _hasValue,
       backRoute: '/combined-billing',
@@ -2114,7 +2156,7 @@ class _GasSpendScreenState extends State<GasSpendScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.12,
+      progress: 0.28125,
       question: 'What did you spend last month on your gas bill?',
       answered: _hasValue,
       backRoute: '/combined-billing',
@@ -2202,7 +2244,7 @@ class _ElecSpendScreenState extends State<ElecSpendScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.13,
+      progress: 0.3125,
       question: 'What did you spend last month on your electricity bill?',
       answered: _hasValue,
       backRoute: '/gas-spend',
@@ -2290,7 +2332,7 @@ class _WaterSpendScreenState extends State<WaterSpendScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.14,
+      progress: 0.34375,
       question: 'What did you spend last month on your water bill?',
       answered: _hasValue,
       backRoute: profile.combinedBilling == true ? '/gas-elec-spend' : '/elec-spend',
@@ -2371,7 +2413,7 @@ class _TariffTypeScreenState extends State<TariffTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.16,
+      progress: 0.375,
       question: 'What type of electricity tariff are you on?',
       answered: _selected != null,
       backRoute: '/water-spend',
@@ -2474,6 +2516,7 @@ class CarSizeScreen extends StatefulWidget {
 
 class _CarSizeScreenState extends State<CarSizeScreen> {
   String? _selected;
+  bool _showCarsList = false;
   static const Color kTransportBlue = Color(0xFF5B84A6);
 
   final List<Map<String, String>> _options = [
@@ -2492,94 +2535,118 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _selected = profile.carSizeAnswered ? profile.carSize : null;
+    _selected = profile.currentCarSize;
   }
 
-  void _showDescription(Map<String, String> option) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(option['label']!),
-          content: Text(option['description']!),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
+  void _removeCar(int index) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    setState(() {
+      profile.cars.removeAt(index);
+    });
+    profile.update();
+  }
+
+  Widget _buildCarsList(ProfileStore profile) {
+    if (profile.cars.isEmpty) return SizedBox.shrink();
+    return Container(
+      constraints: BoxConstraints(maxHeight: 160),
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: kSurface,
+        border: Border.all(color: kBorder),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: profile.cars.length,
+        itemBuilder: (context, index) {
+          final car = profile.cars[index];
+          return ListTile(
+            dense: true,
+            title: Text('${car['size']} • ${car['fuel']}', style: TextStyle(color: kText)),
+            subtitle: Text('${car['mileage']} mi/wk', style: TextStyle(color: kTextSubtle, fontSize: 12)),
+            trailing: IconButton(
+              icon: Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+              onPressed: () => _removeCar(index),
             ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() => _selected = option['value']);
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: kTransportBlue),
-              child: Text('Select this car type'),
-            ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final profile = Provider.of<ProfileStore>(context, listen: false);
+    final hasCars = profile.cars.isNotEmpty;
 
     return QuizFrame(
-      progress: 0.20,
+      progress: 0.4375,
       question: 'What size is your car?',
-      answered: _selected != null,
+      answered: true,
       backRoute: '/transport-intro',
       accentColor: kTransportBlue,
+      nextLabel: hasCars ? 'No more cars →' : 'No cars, let\'s move on →',
       onNext: () {
-        profile.carSize = _selected!;
-        profile.carSizeAnswered = true;
-        profile.update();
-        context.go('/car-fuel');
+        context.go('/bus-spend');
       },
       answerContent: SizedBox(
         height: 340,
         child: SingleChildScrollView(
-          child: GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 16,
-            childAspectRatio: 0.85,
-            children: _options.map((opt) {
-              final isSelected = _selected == opt['value'];
-              return GestureDetector(
-                onTap: () => _showDescription(opt),
-                child: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? kTransportBlue.withOpacity(0.15) : kSurface,
-                    border: Border.all(color: isSelected ? kTransportBlue : kBorder, width: isSelected ? 2 : 1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Image.asset(
-                          opt['image']!,
-                          fit: BoxFit.contain,
-                          color: isSelected ? kTransportBlue : kTextSubtle,
-                          colorBlendMode: BlendMode.srcIn,
-                        ),
-                      ),
-                      SizedBox(height: 6),
-                      Text(
-                        opt['label']!,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kText),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+          child: Column(
+            children: [
+              if (hasCars)
+                TextButton(
+                  onPressed: () => setState(() => _showCarsList = !_showCarsList),
+                  child: Text(
+                    _showCarsList ? 'Hide my cars' : 'Show my cars',
+                    style: TextStyle(color: kTransportBlue, fontWeight: FontWeight.bold),
                   ),
                 ),
-              );
-            }).toList(),
+              if (_showCarsList) _buildCarsList(profile),
+              GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.85,
+                children: _options.map((opt) {
+                  final isSelected = _selected == opt['value'];
+                  return GestureDetector(
+                    onTap: () {
+                      final profile = Provider.of<ProfileStore>(context, listen: false);
+                      profile.currentCarSize = opt['value'];
+                      context.go('/car-fuel');
+                    },
+                    child: Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? kTransportBlue.withOpacity(0.15) : kSurface,
+                        border: Border.all(color: isSelected ? kTransportBlue : kBorder, width: isSelected ? 2 : 1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Image.asset(
+                              opt['image']!,
+                              fit: BoxFit.contain,
+                              color: isSelected ? kTransportBlue : kTextSubtle,
+                              colorBlendMode: BlendMode.srcIn,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(opt['label']!, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kText), textAlign: TextAlign.center),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
           ),
         ),
       ),
@@ -2601,7 +2668,7 @@ class _CarFuelScreenState extends State<CarFuelScreen> {
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _selected = profile.carFuelTypeAnswered ? profile.carFuel : null;
+    _selected = profile.currentCarFuel;
   }
 
   @override
@@ -2609,15 +2676,13 @@ class _CarFuelScreenState extends State<CarFuelScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.22,
+      progress: 0.4375,
       question: 'What type of fuel does your car use?',
       answered: _selected != null,
       backRoute: '/car-size',
       accentColor: kTransportBlue,
       onNext: () {
-        profile.carFuel = _selected!;
-        profile.carFuelTypeAnswered = true;
-        profile.update();
+        profile.currentCarFuel = _selected!;
         context.go('/weekly-mileage');
       },
       answerContent: buildSingleSelectOptions(
@@ -2665,11 +2730,6 @@ class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
   @override
   void initState() {
     super.initState();
-    final profile = Provider.of<ProfileStore>(context, listen: false);
-    if (profile.weeklyMileage > 0) {
-      _controller.text = profile.weeklyMileage.toString();
-      _hasValue = true;
-    }
     _controller.addListener(() {
       setState(() => _hasValue = _controller.text.trim().isNotEmpty);
     });
@@ -2680,15 +2740,22 @@ class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.24,
+      progress: 0.4375,
       question: 'What is you average weekly mileage?',
       answered: _hasValue,
       backRoute: '/car-fuel',
       accentColor: kTransportBlue,
       onNext: () {
-        profile.weeklyMileage = double.tryParse(_controller.text) ?? 0;
+        final mileage = double.tryParse(_controller.text) ?? 0;
+        profile.cars.add({
+          'size': profile.currentCarSize,
+          'fuel': profile.currentCarFuel,
+          'mileage': mileage,
+        });
+        profile.currentCarSize = null;
+        profile.currentCarFuel = null;
         profile.update();
-        context.go('/bus-spend');
+        context.go('/car-size');
       },
       answerContent: Column(
         children: [
@@ -2770,7 +2837,7 @@ class _BusSpendScreenState extends State<BusSpendScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.26,
+      progress: 0.53125,
       question: 'How much do you spend per month on bus and taxi fares?',
       answered: _hasValue,
       backRoute: '/weekly-mileage',
@@ -2860,7 +2927,7 @@ class _TrainSpendScreenState extends State<TrainSpendScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.28,
+      progress: 0.5625,
       question: 'How much do you spend per month on train fares?',
       answered: _hasValue,
       backRoute: '/bus-spend',
@@ -3065,7 +3132,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
   void _onRegionTapped(double lat, double lon) {
     _controller.enableAutoRotate = false;
     _controller.setCameraFocus(lat, lon);
-    _controller.setZoom(2.0);
+    _controller.setZoom(3.0);
     setState(() {
       _countryOptions = findNearbyCountries(lat, lon);
       _step = _TripStep.countryList;
@@ -3095,7 +3162,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
     }
     profile.update();
     _controller.enableAutoRotate = true;
-    _controller.setZoom(1.0);
+    _controller.setZoom(1.5);
     setState(() {
       _step = _TripStep.none;
       _selectedCountry = null;
@@ -3211,7 +3278,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
               TextButton(
                 onPressed: () {
                   _controller.enableAutoRotate = true;
-                  _controller.setZoom(1.0);
+                  _controller.setZoom(1.5);
                   setState(() => _step = _TripStep.none);
                 },
                 child: Text('Cancel', style: TextStyle(color: kTextSubtle)),
@@ -3361,94 +3428,111 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/flights-intro'),
-        ),
-        title: Text(
-          'Your recent holidays',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText),
-        ),
-        centerTitle: true,
-        actions: [
-          if (_currentCo2 != null)
-            Padding(
-              padding: EdgeInsets.only(right: 8),
-              child: Center(
-                child: Row(
-                  children: [
-                    Icon(Icons.eco, color: kFlightsGreen, size: 18),
-                    SizedBox(width: 4),
-                    Text('${_currentCo2!.toStringAsFixed(0)} kg', style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-                  ],
-                ),
-              ),
-            ),
-          _authBarButton(context, accentColor: kFlightsGreen),
-          SizedBox(width: 8),
-        ],
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: kText),
+        onPressed: () => context.go('/flights-intro'),
       ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: GestureDetector(
-                onPanStart: (_) => _controller.enableAutoRotate = false,
-                child: Earth3D(
-                  controller: _controller,
-                  texture: const AssetImage('assets/images/2k_earth-day.jpg'),
-                  initialScale: 3,
-                ),
+      title: Text(
+        'Your recent holidays',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText),
+      ),
+      centerTitle: true,
+      actions: [
+        if (_currentCo2 != null)
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: Center(
+              child: Row(
+                children: [
+                  Icon(Icons.eco, color: kFlightsGreen, size: 18),
+                  SizedBox(width: 4),
+                  Text('${_currentCo2!.toStringAsFixed(0)} kg', style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
+                ],
               ),
             ),
-            if (_step == _TripStep.none)
-              Positioned(
-                left: 24,
-                right: 24,
-                bottom: 32,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_showTripsList) _buildTripsList(),
-                    if (Provider.of<ProfileStore>(context, listen: false).flights.isNotEmpty)
-                      TextButton(
-                        onPressed: () => setState(() => _showTripsList = !_showTripsList),
-                        child: Text(
-                          _showTripsList ? 'Hide trips' : 'See trips',
-                          style: TextStyle(color: kFlightsGreen, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => context.go('/uk-intro'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kFlightsGreen,
-                          padding: EdgeInsets.symmetric(vertical: 18),
-                          shape: StadiumBorder(),
-                        ),
-                        child: Text('No more trips →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        _authBarButton(context, accentColor: kFlightsGreen),
+        SizedBox(width: 8),
+      ],
+      bottom: PreferredSize(
+        preferredSize: Size.fromHeight(8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: 0.625,
+            minHeight: 8,
+            backgroundColor: kBorder,
+            valueColor: AlwaysStoppedAnimation<Color>(kFlightsGreen),
+          ),
+        ),
+      ),
+    ),
+    body: SafeArea(
+      child: Stack(
+        children: [
+          Center(
+            child: GestureDetector(
+              onPanStart: (_) => _controller.enableAutoRotate = false,
+              child: Earth3D(
+                controller: _controller,
+                texture: const AssetImage('assets/images/2k_earth-day.jpg'),
+                initialScale: 3,
+              ),
+            ),
+          ),
+          if (_step == _TripStep.none)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 32,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_showTripsList) _buildTripsList(),
+                  if (Provider.of<ProfileStore>(context, listen: false).flights.isNotEmpty)
+                    TextButton(
+                      onPressed: () => setState(() => _showTripsList = !_showTripsList),
+                      child: Text(
+                        _showTripsList ? 'Hide trips' : 'See trips',
+                        style: TextStyle(color: kFlightsGreen, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ],
-                ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => context.go('/uk-intro'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kFlightsGreen,
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        shape: StadiumBorder(),
+                      ),
+                      child: Text(
+                        Provider.of<ProfileStore>(context, listen: false).flights.isEmpty
+                            ? 'No flights →'
+                            : 'No more flights →',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            if (_step != _TripStep.none)
-              Positioned.fill(
-                child: Center(
-                  child: _buildOverlayPanel(),
-                ),
+            ),
+          if (_step != _TripStep.none)
+            Positioned.fill(
+              child: Center(
+                child: _buildOverlayPanel(),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 const Color kTripsRed = Color(0xFFE66051);
@@ -3551,7 +3635,7 @@ class _HotelNightsScreenState extends State<HotelNightsScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.44,
+      progress: 0.6875,
       question: 'Roughly how many nights per year do you stay in UK airbnb\'s or holiday homes?',
       answered: _hasValue,
       backRoute: '/UK-intro',
@@ -3641,7 +3725,7 @@ class _AirbnbNightsScreenState extends State<AirbnbNightsScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.44,
+      progress: 0.71875,
       question: 'Roughly how many nights per year do you stay in UK hotels?',
       answered: _hasValue,
       backRoute: '/hotel-nights',
@@ -3874,7 +3958,7 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.75,
+      progress: 0.78125,
       question: 'Do you have any pets?',
       answered: true,
       accentColor: kPetsPurple,
@@ -3885,7 +3969,7 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
         context.go('/diet-intro');
       },
       answerContent: SizedBox(
-        height: 400,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -4006,14 +4090,14 @@ class _RMDaysScreenState extends State<RMDaysScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.6,
+      progress: 0.84375,
       question: 'How many days a week do you eat red meat?',
       subheading: '(e.g. beef or pork)',
       answered: _hasValue,
       backRoute: '/diet-intro',
       accentColor: kDietOrange,
       onNext: () {
-        profile.rmDays = double.tryParse(_controller.text) ?? 0;
+        profile.rmDays = int.tryParse(_controller.text) ?? 0;
         profile.update();
         context.go('/wm-days');
       },
@@ -4037,7 +4121,7 @@ class _RMDaysScreenState extends State<RMDaysScreen> {
                   child: TextField(
                     controller: _controller,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*'))],
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
@@ -4096,14 +4180,14 @@ class _WMDaysScreenState extends State<WMDaysScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.62,
+      progress: 0.875,
       question: 'How many days a week do you eat white meat?',
       subheading: '(e.g. chicken or fish)',
       answered: _hasValue,
       backRoute: '/rm-spend',
       accentColor: kDietOrange,
       onNext: () {
-        profile.wmDays = double.tryParse(_controller.text) ?? 0;
+        profile.wmDays = int.tryParse(_controller.text) ?? 0;
         profile.update();
         context.go('/weekly-shop');
       },
@@ -4127,7 +4211,7 @@ class _WMDaysScreenState extends State<WMDaysScreen> {
                   child: TextField(
                     controller: _controller,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*'))],
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
@@ -4186,7 +4270,7 @@ class _WeeklyShopScreenState extends State<WeeklyShopScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.64,
+      progress: 0.90625,
       question: 'Roughly how much do you spend on your weekly shop?',
       answered: _hasValue,
       backRoute: '/wm-days',
@@ -4268,7 +4352,7 @@ class _WasteScreenState extends State<WasteScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.66,
+      progress: 0.9375,
       question: 'What do you do with your rubbish?',
       answered: _selected != null,
       backRoute: '/weekly-shop',
@@ -4326,7 +4410,7 @@ class _FoodWasteScreenState extends State<FoodWasteScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.68,
+      progress: 0.96875,
       question: 'What do you do with your food waste?',
       answered: _selected != null,
       backRoute: '/waste',
@@ -4358,552 +4442,327 @@ class _FoodWasteScreenState extends State<FoodWasteScreen> {
   }
 }
 
-// ── Diet Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-class DietScreen extends StatefulWidget {
+// ── Spending Section Intro ───────────────────────────────────────────────
+class SpendingIntroScreen extends StatelessWidget {
   @override
-  _DietScreenState createState() => _DietScreenState();
-}
 
-class _DietScreenState extends State<DietScreen> {
-  int _rmDays = 0;  
-  int _wmDays = 0;
-  final _shoppingController = TextEditingController();
-  String? _foodWaste;
-  String? _normalWaste;
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = Provider.of<ProfileStore>(context, listen: false);
-    _rmDays = profile.rmDays;
-    _wmDays = profile.wmDays;
-    _shoppingController.text = profile.nonMeatSpend > 0 ? profile.nonMeatSpend.toString() : '';
-    _foodWaste = profile.foodWasteAction;
-    _normalWaste = profile.wasteAction;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/flights'),
+          onPressed: () => context.go('/food-waste'),
         ),
         actions: [
-          _authBarButton(context),
+          _authBarButton(context, accentColor: kSpendingBlue),
           SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
         child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-
-                  SizedBox(height: 0),
-
-                  Text(
-                    'Diet And Waste',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-
-                  progressBar(0.5),
-                  SizedBox(height: 24),
-
-                  Text(
-                    'Eating and waste habits',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-
-                  // Red meat days
-                  Text('Number of days a week that you eat red meat',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (_rmDays > 0) setState(() => _rmDays--);
-                        },
-                        icon: Icon(Icons.remove_circle_outline),
-                        color: kPrimary,
-                        iconSize: 32,
-                      ),
-                      Text(
-                        '$_rmDays',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          if (_rmDays < 7) setState(() => _rmDays++);
-                        },
-                        icon: Icon(Icons.add_circle_outline),
-                        color: kPrimary,
-                        iconSize: 32,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10),
-
-                  // White meat days
-                  Text('Number of days a week that you eat white meat',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (_wmDays > 0) setState(() => _wmDays--);
-                        },
-                        icon: Icon(Icons.remove_circle_outline),
-                        color: kPrimary,
-                        iconSize: 32,
-                      ),
-                      Text(
-                        '$_wmDays',
-                        style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          if (_wmDays < 7) setState(() => _wmDays++);
-                        },
-                        icon: Icon(Icons.add_circle_outline),
-                        color: kPrimary,
-                        iconSize: 32,
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 10),
-
-                  // Shopping spend
-                  Text('Weekly shopping spend on non-meat items',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _shoppingController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                    decoration: InputDecoration(
-                      hintText: 'e.g. £60',
-                      suffixText: 'per week',
-                    ),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Food waste dropdown
-                  Text('What do you generally do with your food waste?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _foodWaste,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'bin', child: Text('Put it in the normal bin')),
-                      DropdownMenuItem(value: 'compost', child: Text('Compost it/Food waste bin')),
-                    ],
-                    onChanged: (value) => setState(() => _foodWaste = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Normal waste dropdown
-                  Text('What do you generally do with your everyday waste?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _normalWaste,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'recycle', child: Text('Recycle')),
-                      DropdownMenuItem(value: 'non_recycle', child: Text('Put it in the normal bin')),
-                      DropdownMenuItem(value: 'upcycle', child: Text('Upcycle')),
-                    ],
-                    onChanged: (value) => setState(() => _normalWaste = value!),
-                  ),
-                  SizedBox(height: 24),                
-
-                  SizedBox(height: 32),
-
-                  // Next button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: (_foodWaste == null || _normalWaste == null) ? null :() {
-                        profile.rmDays = _rmDays;
-                        profile.wmDays = _wmDays;
-                        profile.nonMeatSpend = double.tryParse(_shoppingController.text) ?? 0;
-                        profile.foodWasteAction = _foodWaste;
-                        profile.wasteAction = _normalWaste;
-                        profile.update();
-                        context.go('/pets');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
+          child: Stack(
+            children: [
+              Positioned(
+                top: 60,
+                right: 24,
+                child: Transform.rotate(
+                  angle: -0.4,
+                  child: Icon(Icons.monetization_on, color: kSpendingBlue, size: 90),
+                ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Spending Screen ────────────────────────────────────────────────────────────
-class SpendingScreen extends StatefulWidget {
-  @override
-  _SpendingScreenState createState() => _SpendingScreenState();
-}
-
-class _SpendingScreenState extends State<SpendingScreen> {
-  final _takeawayController = TextEditingController(text: '0');
-  final _drinksController = TextEditingController(text: '0');
-  final _alcoholController = TextEditingController(text: '0');
-  final _tobaccoController = TextEditingController(text: '0');
-  final _clothesController = TextEditingController(text: '0');
-  final _soapController = TextEditingController(text: '0');
-  final _medicineController = TextEditingController(text: '0');
-  final _electronicsController = TextEditingController(text: '0');
-  final _machineryController = TextEditingController(text: '0');
-  final _educationController = TextEditingController(text: '0');
-  final _healthcareController = TextEditingController(text: '0');
-  final _careController = TextEditingController(text: '0');
-  final _furnitureController = TextEditingController(text: '0');
-  final _servicesController = TextEditingController(text: '0');
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = Provider.of<ProfileStore>(context, listen: false);
-    _takeawayController.text = profile.monthlyTakeaway > 0 ? profile.monthlyTakeaway.toString() : '0';
-    _drinksController.text = profile.monthlyDrinks > 0 ? profile.monthlyDrinks.toString() : '0';
-    _alcoholController.text = profile.monthlyAlcohol > 0 ? profile.monthlyAlcohol.toString() : '0';
-    _tobaccoController.text = profile.monthlyTobacco > 0 ? profile.monthlyTobacco.toString() : '0';
-    _clothesController.text = profile.monthlyClothes > 0 ? profile.monthlyClothes.toString() : '0';
-    _soapController.text = profile.monthlySoap > 0 ? profile.monthlySoap.toString() : '0';
-    _medicineController.text = profile.monthlyMedicine > 0 ? profile.monthlyMedicine.toString() : '0';
-    _electronicsController.text = profile.yearlyElectronics > 0 ? profile.yearlyElectronics.toString() : '0';
-    _machineryController.text = profile.yearlyMachinery > 0 ? profile.yearlyMachinery.toString() : '0';
-    _educationController.text = profile.monthlyEducation > 0 ? profile.monthlyEducation.toString() : '0';
-    _healthcareController.text = profile.monthlyHealthcare > 0 ? profile.monthlyHealthcare.toString() : '0';
-    _careController.text = profile.monthlyCare > 0 ? profile.monthlyCare.toString() : '0';
-    _furnitureController.text = profile.yearlyFurniture > 0 ? profile.yearlyFurniture.toString() : '0';
-    _servicesController.text = profile.monthlyServices > 0 ? profile.monthlyServices.toString() : '0';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/pets'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-
-                SizedBox(height: 0),
-                Text(
-                  'Spending',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-                progressBar(0.8),
-                SizedBox(height: 24),
-
-                Text(
-                  'Your spending habits',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'Enter 0 for categories that don\'t apply to you.',
-                  style: TextStyle(color: kTextSubtle),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 24),
-
-                // Scrollable list of inputs
-                Expanded(
-                  child: ListView(
-                    children: [
-
-                      // ── Monthly spending ──────────────────────────
-                      _sectionHeader('Monthly Spending'),
-                      SizedBox(height: 12),
-
-                      _spendField('Eating out & takeaways', _takeawayController, '£', 'per month'),
-                      _spendField('Soft drinks', _drinksController, '£', 'per month'),
-                      _spendField('Alcohol', _alcoholController, '£', 'per month'),
-                      _spendField('Tobacco', _tobaccoController, '£', 'per month'),
-                      _spendField('Clothing & footwear', _clothesController, '£', 'per month'),
-                      _spendField('Soaps & detergents', _soapController, '£', 'per month'),
-                      _spendField('Medicines', _medicineController, '£', 'per month'),
-                      _spendField('Education (e.g. tuition, courses)', _educationController, '£', 'per month'),
-                      _spendField('Healthcare (e.g. private appointments)', _healthcareController, '£', 'per month'),
-                      _spendField('Care homes', _careController, '£', 'per month'),
-                      _spendField('Services (e.g. haircuts, repairs)', _servicesController, '£', 'per month'),
-
-                      SizedBox(height: 24),
-
-                      // ── Yearly spending ───────────────────────────
-                      _sectionHeader('Yearly Spending'),
-                      SizedBox(height: 12),
-
-                      _spendField('Electronics (phones, laptops, gadgets)', _electronicsController, '£', 'per year'),
-                      _spendField('Tools & machinery', _machineryController, '£', 'per year'),
-                      _spendField('Furniture & homewares', _furnitureController, '£', 'per year'),
-
-                      SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      profile.monthlyTakeaway   = double.tryParse(_takeawayController.text) ?? 0;
-                      profile.monthlyDrinks     = double.tryParse(_drinksController.text) ?? 0;
-                      profile.monthlyAlcohol    = double.tryParse(_alcoholController.text) ?? 0;
-                      profile.monthlyTobacco    = double.tryParse(_tobaccoController.text) ?? 0;
-                      profile.monthlyClothes    = double.tryParse(_clothesController.text) ?? 0;
-                      profile.monthlySoap       = double.tryParse(_soapController.text) ?? 0;
-                      profile.monthlyMedicine   = double.tryParse(_medicineController.text) ?? 0;
-                      profile.monthlyEducation  = double.tryParse(_educationController.text) ?? 0;
-                      profile.monthlyHealthcare = double.tryParse(_healthcareController.text) ?? 0;
-                      profile.monthlyCare       = double.tryParse(_careController.text) ?? 0;
-                      profile.monthlyServices   = double.tryParse(_servicesController.text) ?? 0;
-                      profile.yearlyElectronics = double.tryParse(_electronicsController.text) ?? 0;
-                      profile.yearlyMachinery   = double.tryParse(_machineryController.text) ?? 0;
-                      profile.yearlyFurniture   = double.tryParse(_furnitureController.text) ?? 0;
-                      profile.update();
-                      context.go('/household');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Helper widgets ──────────────────────────────────────────────────────────
-
-  Widget _sectionHeader(String title) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: kPrimary.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.bold, color: kText),
-      ),
-    );
-  }
-
-  Widget _spendField(String label, TextEditingController controller,
-      String prefix, String suffix) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: kText, fontSize: 14)),
-          SizedBox(height: 6),
-          TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: '0',
-              prefix: Text('£ ', style: TextStyle(color: kText)),
-              suffixText: suffix,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Household Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-class HouseholdScreen extends StatefulWidget {
-  @override
-  _HouseholdScreenState createState() => _HouseholdScreenState();
-}
-
-class _HouseholdScreenState extends State<HouseholdScreen> {
-  int? _numPeople;
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = Provider.of<ProfileStore>(context, listen: false);
-    _numPeople = profile.numPeople;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/spending'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-
-                // Progress indicator
-
-                SizedBox(height: 0), //these are empty spaces, put them wherever you want a gap
-                
-                Text(
-                  'Last Question...',
-                  style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 12),
-
-                progressBar(0.1),
-                SizedBox(height: 24),
-
-                Text(
-                  'How many people are there in your household?',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 70),
-
-                // Number of people
-                Text('Number of people in your household',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                SizedBox(height: 8),
-                Row(
+              Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    IconButton(
-                      onPressed: () {
-                        if (_numPeople != null && _numPeople! > 1) setState(() => _numPeople = _numPeople! - 1);
-                      },
-                      icon: Icon(Icons.remove_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
-                    ),
                     Text(
-                      '$_numPeople',
-                      style: TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                      'Spending',
+                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
+                      textAlign: TextAlign.center,
                     ),
-                    IconButton(
-                      onPressed: () => setState(() => _numPeople = (_numPeople ?? 0) + 1),
-                      icon: Icon(Icons.add_circle_outline),
-                      color: kPrimary,
-                      iconSize: 32,
+                    SizedBox(height: 16),
+                    Text(
+                      'Your spending and lifestyle habits',
+                      style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/spending-hub'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kSpendingBlue,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Let\'s Go →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
                     ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                Spacer(),
 
-                // Next button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _numPeople == null ? null : () {
-                      profile.numPeople = _numPeople;
-                      profile.update();
-                      context.go('/results');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
-                    ),
-                    child: Text(
-                      'Next →',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+// ── Spending Category Question ──────────────────────────────────────────
+class SpendingCategoryScreen extends StatefulWidget {
+  final String categoryKey;
+  const SpendingCategoryScreen({required this.categoryKey});
+
+  @override
+  _SpendingCategoryScreenState createState() => _SpendingCategoryScreenState();
+}
+
+class _SpendingCategoryScreenState extends State<SpendingCategoryScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  double _getValue(ProfileStore profile, String key) {
+    switch (key) {
+      case 'takeaway': return profile.monthlyTakeaway;
+      case 'drinks': return profile.monthlyDrinks;
+      case 'alcohol': return profile.monthlyAlcohol;
+      case 'tobacco': return profile.monthlyTobacco;
+      case 'clothes': return profile.monthlyClothes;
+      case 'soap': return profile.monthlySoap;
+      case 'medicine': return profile.monthlyMedicine;
+      case 'electronics': return profile.yearlyElectronics;
+      case 'machinery': return profile.yearlyMachinery;
+      case 'education': return profile.monthlyEducation;
+      case 'healthcare': return profile.monthlyHealthcare;
+      case 'care': return profile.monthlyCare;
+      case 'furniture': return profile.yearlyFurniture;
+      case 'services': return profile.monthlyServices;
+      default: return 0;
+    }
+  }
+
+  void _setValue(ProfileStore profile, String key, double value) {
+    switch (key) {
+      case 'takeaway': profile.monthlyTakeaway = value; break;
+      case 'drinks': profile.monthlyDrinks = value; break;
+      case 'alcohol': profile.monthlyAlcohol = value; break;
+      case 'tobacco': profile.monthlyTobacco = value; break;
+      case 'clothes': profile.monthlyClothes = value; break;
+      case 'soap': profile.monthlySoap = value; break;
+      case 'medicine': profile.monthlyMedicine = value; break;
+      case 'electronics': profile.yearlyElectronics = value; break;
+      case 'machinery': profile.yearlyMachinery = value; break;
+      case 'education': profile.monthlyEducation = value; break;
+      case 'healthcare': profile.monthlyHealthcare = value; break;
+      case 'care': profile.monthlyCare = value; break;
+      case 'furniture': profile.yearlyFurniture = value; break;
+      case 'services': profile.monthlyServices = value; break;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final currentValue = _getValue(profile, widget.categoryKey);
+    if (currentValue > 0) {
+      _controller.text = currentValue.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final cat = spendingCategories.firstWhere((c) => c['key'] == widget.categoryKey);
+    final period = cat['period'] == 'month' ? 'per month' : 'per year';
+
+    return QuizFrame(
+      progress: 0.99,
+      question: 'How much do you spend on ${cat['label']}?',
+      subheading: period,
+      answered: _hasValue,
+      accentColor: kSpendingBlue,
+      backRoute: '/spending-hub',
+      onNext: () {
+        _setValue(profile, widget.categoryKey, double.tryParse(_controller.text) ?? 0);
+        profile.update();
+        context.go('/spending-hub');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text('e.g.', style: TextStyle(fontSize: 20, color: kText)),
+                Text('£', style: TextStyle(fontSize: 20, fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal, color: kText)),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '20',
+                      hintStyle: TextStyle(fontSize: 20, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ),   // ← closes screenWrapper
-      ),     // ← closes SafeArea
-    );       // ← closes Scaffold
+        ],
+      ),
+    );
   }
 }
 
+// ── Spending Hub Screen ─────────────────────────────────────────────────
+class SpendingHubScreen extends StatelessWidget {
+  double _getValue(ProfileStore profile, String key) {
+    switch (key) {
+      case 'takeaway': return profile.monthlyTakeaway;
+      case 'drinks': return profile.monthlyDrinks;
+      case 'alcohol': return profile.monthlyAlcohol;
+      case 'tobacco': return profile.monthlyTobacco;
+      case 'clothes': return profile.monthlyClothes;
+      case 'soap': return profile.monthlySoap;
+      case 'medicine': return profile.monthlyMedicine;
+      case 'electronics': return profile.yearlyElectronics;
+      case 'machinery': return profile.yearlyMachinery;
+      case 'education': return profile.monthlyEducation;
+      case 'healthcare': return profile.monthlyHealthcare;
+      case 'care': return profile.monthlyCare;
+      case 'furniture': return profile.yearlyFurniture;
+      case 'services': return profile.monthlyServices;
+      default: return 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/spending-intro'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kSpendingBlue),
+          SizedBox(width: 8),
+        ],
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Text(
+                'What do you spend on?',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Tap a category to add an amount. Skip anything that doesn\'t apply.',
+                style: TextStyle(fontSize: 13, color: kTextSubtle),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: GridView.count(
+                    crossAxisCount: 3,
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.9,
+                    children: spendingCategories.map((cat) {
+                      final value = _getValue(profile, cat['key'] as String);
+                      final hasAnswer = value > 0;
+                      return GestureDetector(
+                        onTap: () => context.go('/spending/${cat['key']}'),
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: hasAnswer ? kSpendingBlue.withOpacity(0.2) : kSurface,
+                            border: Border.all(color: hasAnswer ? kSpendingBlue : kBorder, width: hasAnswer ? 2 : 1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(cat['icon'] as IconData, color: kSpendingBlue, size: 26),
+                              SizedBox(height: 6),
+                              Text(
+                                cat['label'] as String,
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kText),
+                                textAlign: TextAlign.center,
+                              ),
+                              if (hasAnswer) ...[
+                                SizedBox(height: 2),
+                                Text('£${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 10, color: kSpendingBlue, fontWeight: FontWeight.bold)),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => context.go('/results'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kSpendingBlue,
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    shape: StadiumBorder(),
+                  ),
+                  child: Text('See results →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 // ── Results Screen ────────────────────────────────────────────────────────────
 class ResultsScreen extends StatefulWidget {
@@ -4957,7 +4816,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/household'),
+          onPressed: () => context.go('/spending-hub'),
         ),
         actions: [
           _authBarButton(context),

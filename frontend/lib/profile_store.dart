@@ -29,13 +29,11 @@ class ProfileStore extends ChangeNotifier {
   int billingMonth = DateTime.now().month == 1 ? 12 : DateTime.now().month - 1;
 
   // ── Transport ──────────────────────────────────────────
-  double weeklyMileage = 0;
-  String carFuel = 'petrol';
-  bool carFuelTypeAnswered = false;
-  String carSize = 'supermini';
+  List<Map<String, dynamic>> cars = [];
+  String? currentCarSize;
+  String? currentCarFuel;
   double monthlyBusSpend = 0;
   double monthlyTrainSpend = 0;
-  bool carSizeAnswered = false;
 
   // ── Flights & Accommodation ────────────────────────────
   List<Map<String, dynamic>> flights = [];
@@ -128,9 +126,7 @@ class ProfileStore extends ChangeNotifier {
       'tariff':                   tariff,
       'monthly_solar':            monthlySolarKwh,
       'monthly_water_spend':      monthlyWaterSpend,
-      'weekly_mileage':           weeklyMileage,
-      'car_fuel':                 carFuel,
-      'car_size':                 carSize,
+      'cars':                     cars,
       'monthly_bus_spend':        monthlyBusSpend,
       'monthly_train_spend':      monthlyTrainSpend,
       'flights':                  flights,
@@ -193,8 +189,6 @@ class ProfileStore extends ChangeNotifier {
       'fuel_type_answered': fuelTypeAnswered,
       'hob_type_answered': hobTypeAnswered,
       'tariff_answered': tariffAnswered,
-      'car_size_answered': carSizeAnswered,
-      'car_fuel_type_answered': carFuelTypeAnswered,
       'waste_answered': wasteAnswered,
       'food_waste_answered': foodWasteAnswered,
     };
@@ -223,11 +217,10 @@ class ProfileStore extends ChangeNotifier {
     solarPanelsAnswered = data['solar_panels_answered'] as bool? ?? solarPanelsAnswered;
     monthlySolarKwh = _d(data['monthly_solar'], monthlySolarKwh);
     monthlyWaterSpend = _d(data['monthly_water_spend'], monthlyWaterSpend);
-    weeklyMileage = _d(data['weekly_mileage'], weeklyMileage);
-    carFuel = _s(data['car_fuel'], carFuel);
-    carFuelTypeAnswered = data['car_fuel_type_answered'] as bool? ?? carFuelTypeAnswered;
-    carSize = _s(data['car_size'], carSize);
-    carSizeAnswered = data['car_size_answered'] as bool? ?? carSizeAnswered;
+    if (data['cars'] != null) {
+      cars = List<Map<String, dynamic>>.from(
+          (data['cars'] as List).map((e) => Map<String, dynamic>.from(e)));
+    }
     monthlyBusSpend = _d(data['monthly_bus_spend'], monthlyBusSpend);
     monthlyTrainSpend = _d(data['monthly_train_spend'], monthlyTrainSpend);
     hotelNights = _d(data['uk_hotel_nights'], hotelNights);
