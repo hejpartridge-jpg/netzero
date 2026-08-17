@@ -53,10 +53,13 @@ def calculate_total_annual_cost(profile: dict) -> float:
     return gas_cost + electricity_cost + water_cost
 
 def calculate_annual_car_cost(profile: dict) -> float:
-    weekly_mileage = profile.get("weekly_mileage", 0)
-    car_fuel = profile.get("car_fuel")
-    cost_per_mile = CAR_COST_PER_MILE.get(car_fuel, 0)
-    return weekly_mileage * 52 * cost_per_mile
+    total_cost = 0
+    for car in profile.get("cars", []):
+        weekly_mileage = car.get("mileage", 0)
+        car_fuel = car.get("fuel")
+        cost_per_mile = CAR_COST_PER_MILE.get(car_fuel, 0)
+        total_cost += weekly_mileage * 52 * cost_per_mile
+    return total_cost
 
 # Essentially what I put in the terminal
 # It is now in a way where it takes user inputs from flutter, stores them in a dictionary, and now pastes those dictionary inputs in here!
