@@ -16,7 +16,7 @@ import 'package:flutter_earth_globe/globe_coordinates.dart';
 import 'package:flutter_globe_3d/flutter_globe_3d.dart';
 import 'dart:math';
 
-const bool kUnderConstruction = true;
+const bool kUnderConstruction = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -688,7 +688,6 @@ class _QuizFrameState extends State<QuizFrame> {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('Full breakdown: ${data['breakdown']}');
         setState(() => _currentCo2 = (data['total_kg_co2e'] as num).toDouble());
       }
     } catch (e) {
@@ -2840,7 +2839,7 @@ class _BusSpendScreenState extends State<BusSpendScreen> {
       progress: 0.53125,
       question: 'How much do you spend per month on bus and taxi fares?',
       answered: _hasValue,
-      backRoute: '/weekly-mileage',
+      backRoute: '/car-size',
       accentColor: kTransportBlue,
       onNext: () {
         profile.monthlyBusSpend = double.tryParse(_controller.text) ?? 0;
