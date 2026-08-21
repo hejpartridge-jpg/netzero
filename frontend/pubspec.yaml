@@ -78,6 +78,22 @@ flutter:
     - assets/images/car_suv.png
     - assets/images/car_mpv.png
     - assets/images/2k_earth-day.jpg
+    - assets/images/house_detached.png
+    - assets/images/house_semi_detached.png
+    - assets/images/house_terraced.png
+    - assets/images/house_bungalow.png
+    - assets/images/house_flat.png
+    - assets/images/solid_wall.png
+    - assets/images/cavity_wall.png
+    - assets/images/1.png
+    - assets/images/2.png
+    - assets/images/3.png
+    - assets/images/4.png
+    - assets/images/5.png
+    - assets/images/6.png
+    - assets/images/incandescent.png
+    - assets/images/cfl.png
+    - assets/images/led.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

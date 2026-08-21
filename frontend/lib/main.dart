@@ -15,8 +15,10 @@ import 'package:flutter_earth_globe/point.dart';
 import 'package:flutter_earth_globe/globe_coordinates.dart';
 import 'package:flutter_globe_3d/flutter_globe_3d.dart';
 import 'dart:math';
+import 'package:flutter/services.dart';
+import 'dart:async';
 
-const bool kUnderConstruction = false;
+const bool kUnderConstruction = true;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,14 +97,16 @@ final _router = GoRouter(
     ),
     GoRoute(path: '/results',      builder: (context, state) => ResultsScreen()),
     GoRoute(path: '/login-reminder', builder: (context, state) => LoginReminderScreen()),
-    GoRoute(path: '/phase2',       builder: (context, state) => Phase2Screen()),
     GoRoute(path: '/quiz',         builder: (context, state) => QuizScreen()),
     GoRoute(path: '/energyaction', builder: (context, state) => EnergyActionScreen()),
-    GoRoute(path: '/homeinfo',     builder: (context, state) => HomeInfoScreen()),
+    GoRoute(path: '/property-type', builder: (context, state) => PropertyTypeScreen()),
+    GoRoute(path: '/wall-type', builder: (context, state) => WallTypeScreen()),
+    GoRoute(path: '/boiler-age', builder: (context, state) => BoilerAgeScreen()),
+    GoRoute(path: '/lightbulbs', builder: (context, state) => LightbulbsScreen()),
+    GoRoute(path: '/shower-type', builder: (context, state) => ShowerTypeScreen()),
     GoRoute(path: '/insulation',   builder: (context, state) => InsulationScreen()),
     GoRoute(path: '/habit',        builder: (context, state) => HabitScreen()),
     GoRoute(path: '/homeowner',    builder: (context, state) => HomeownerScreen()),
-    GoRoute(path: '/phase3',       builder: (context, state) => Phase3Screen()),
     GoRoute(path: '/actions',      builder: (context, state) => ActionScreen()),
   ],
 );
@@ -452,9 +456,11 @@ Widget buildYesNoOptions({
   required void Function(bool) onSelect,
   String leftLabel = 'Yes',
   IconData leftIcon = Icons.check_circle_outline,
+  String? leftImage,
   String? leftSubtitle,
   String rightLabel = 'No',
   IconData rightIcon = Icons.cancel_outlined,
+  String? rightImage,
   String? rightSubtitle,
 }) {
   final hasSubtitles = leftSubtitle != null || rightSubtitle != null;
@@ -477,7 +483,17 @@ Widget buildYesNoOptions({
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(leftIcon, color: kPrimary, size: 32),
+                leftImage != null
+                  ? SizedBox(
+                      height: 40,
+                      child: Image.asset(
+                        leftImage,
+                        fit: BoxFit.contain,
+                        color: selected == true ? kPrimary : kTextSubtle,
+                        colorBlendMode: BlendMode.srcIn,
+                      ),
+                    )
+                  : Icon(leftIcon, color: kPrimary, size: 32),
                 SizedBox(height: 8),
                 Text(leftLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText), textAlign: TextAlign.center),
                 if (leftSubtitle != null) ...[
@@ -507,7 +523,17 @@ Widget buildYesNoOptions({
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(rightIcon, color: kTextSubtle, size: 32),
+                rightImage != null
+                    ? SizedBox(
+                        height: 40,
+                        child: Image.asset(
+                          rightImage,
+                          fit: BoxFit.contain,
+                          color: selected == false ? kPrimary : kTextSubtle,
+                          colorBlendMode: BlendMode.srcIn,
+                        ),
+                      )
+                    : Icon(rightIcon, color: kTextSubtle, size: 32),
                 SizedBox(height: 8),
                 Text(rightLabel, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText), textAlign: TextAlign.center),
                 if (rightSubtitle != null) ...[
@@ -547,7 +573,19 @@ Widget buildSingleSelectOptions({
             ),
             child: Row(
               children: [
-                if (opt['icon'] != null) ...[
+                if (opt['image'] != null) ...[
+                  SizedBox(
+                    height: 48,
+                    width: 48,
+                    child: Image.asset(
+                      opt['image'] as String,
+                      fit: BoxFit.contain,
+                      color: isSelected ? accentColor : kTextSubtle,
+                      colorBlendMode: BlendMode.srcIn,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                ] else if (opt['icon'] != null) ...[
                   Icon(opt['icon'] as IconData, color: accentColor),
                   SizedBox(width: 12),
                 ],
@@ -671,11 +709,18 @@ class QuizFrame extends StatefulWidget {
 
 class _QuizFrameState extends State<QuizFrame> {
   double? _currentCo2;
+  final FocusNode _keyboardFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _fetchLiveTotal();
+  }
+
+  @override
+  void dispose() {
+    _keyboardFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchLiveTotal() async {
@@ -691,13 +736,27 @@ class _QuizFrameState extends State<QuizFrame> {
         setState(() => _currentCo2 = (data['total_kg_co2e'] as num).toDouble());
       }
     } catch (e) {
-      // Silently fail - the live counter just won't update this time
+      print('Live total fetch error: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Focus(
+      focusNode: _keyboardFocusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.enter ||
+             event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+          if (widget.answered) {
+            widget.onNext();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -783,7 +842,102 @@ class _QuizFrameState extends State<QuizFrame> {
                   )
                 else
                   SizedBox(height: 54),
-              ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Results Screen Comparison ───────────────────────────
+const Map<String, String> comparisonLabels = {
+  'miles_driven': 'miles driven',
+  'uk_home_years': 'years powering a UK home',
+  'flights_london_ny': 'London to NYC round flights',
+  'number_of_cows': 'cows',
+  'hours_burnt': 'hours of burning a campfire',
+  'football_pitches': 'football pitches of trees',
+};
+
+class ComparisonBadge extends StatefulWidget {
+  final Map<String, dynamic> stats;
+
+  const ComparisonBadge({required this.stats});
+
+  @override
+  _ComparisonBadgeState createState() => _ComparisonBadgeState();
+}
+
+class _ComparisonBadgeState extends State<ComparisonBadge> {
+  int _index = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(Duration(seconds: 3), (timer) {
+      setState(() {
+        _index = (_index + 1) % widget.stats.length;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = widget.stats.keys.toList();
+    final currentKey = keys[_index];
+    final currentValue = widget.stats[currentKey];
+    final currentLabel = comparisonLabels[currentKey] ?? '';
+
+    return Transform.rotate(
+      angle: -0.30,
+      child: Container(
+        width: 110,
+        height: 110,
+        decoration: ShapeDecoration(
+          color: kTripsRed,
+          shape: StarBorder(
+            points: 12,
+            innerRadiusRatio: 0.8,
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: AnimatedSwitcher(
+              duration: Duration(milliseconds: 400),
+              child: Column(
+                key: ValueKey(currentKey),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Equal to',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    '$currentValue',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    currentLabel,
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -810,6 +964,23 @@ class HoverRevealField extends StatefulWidget {
 
 class _HoverRevealFieldState extends State<HoverRevealField> {
   bool _open = false;
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (!widget.autoCloseOnChange && !_focusNode.hasFocus && _open) {
+        setState(() => _open = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(HoverRevealField oldWidget) {
@@ -824,15 +995,28 @@ class _HoverRevealFieldState extends State<HoverRevealField> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => setState(() => _open = true),
+      onTap: () {
+        setState(() => _open = true);
+        if (!widget.autoCloseOnChange) {
+          FocusScope.of(context).requestFocus(_focusNode);
+        }
+      },
       child: _open
-          ? Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                border: Border.all(color: kPetsPurple),
-                borderRadius: BorderRadius.circular(6),
+          ? TapRegion(
+              onTapOutside: (event) {
+                setState(() => _open = false);
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: kSurface,
+                  border: Border.all(color: kPetsPurple),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: !widget.autoCloseOnChange
+                    ? Focus(focusNode: _focusNode, child: widget.editorBuilder(context))
+                    : widget.editorBuilder(context),
               ),
-              child: widget.editorBuilder(context),
             )
           : MouseRegion(
               cursor: SystemMouseCursors.click,
@@ -882,9 +1066,12 @@ class _PetCardState extends State<PetCard> {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 70, child: Text('$label:', style: TextStyle(fontWeight: FontWeight.bold, color: kText))),
+          SizedBox(
+            width: 110,
+            child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
+          ),
           Expanded(child: field),
         ],
       ),
@@ -932,7 +1119,7 @@ class _PetCardState extends State<PetCard> {
             ),
           ),
           _row(
-            'Food Type',
+            'Food Type: *',
             HoverRevealField(
               displayValue: pet['food'] ?? '',
               editorBuilder: (context) => DropdownButton<String>(
@@ -974,17 +1161,45 @@ class _PetCardState extends State<PetCard> {
             ),
           ),
           _row(
-            'Daily Weight Of Food',
+            'Daily Weight\nof Food: *',
             HoverRevealField(
-              displayValue: pet['weight'] != null ? '${pet['weight']} kg' : '',
+              displayValue: pet['weight'] != null ? '${pet['weight']} g' : '',
               autoCloseOnChange: false,
-              editorBuilder: (context) => TextField(
-                controller: _weightController,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: kText),
-                decoration: InputDecoration(border: InputBorder.none, isDense: true),
-                onChanged: (value) => _update('weight', double.tryParse(value) ?? 0),
-              ),
+              editorBuilder: (context) {
+                final hasText = _weightController.text.trim().isNotEmpty;
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    if (!hasText)
+                      Text('e.g. ', style: TextStyle(color: kTextSubtle, fontSize: 14)),
+                    IntrinsicWidth(
+                      child: TextField(
+                        controller: _weightController,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(color: kText, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: '200',
+                          hintStyle: TextStyle(color: kTextSubtle, fontSize: 14),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          filled: false,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: (value) {
+                          setState(() {});
+                          _update('weight', double.tryParse(value) ?? 0);
+                        },
+                      ),
+                    ),
+                    Text(' g', style: TextStyle(color: kTextSubtle, fontSize: 14)),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -1005,11 +1220,11 @@ const List<Map<String, dynamic>> spendingCategories = [
   {'key': 'soap', 'label': 'Soap & Detergents', 'icon': Icons.soap, 'period': 'month'},
   {'key': 'medicine', 'label': 'Medicine', 'icon': Icons.medication, 'period': 'month'},
   {'key': 'electronics', 'label': 'Electronics', 'icon': Icons.devices, 'period': 'year'},
-  {'key': 'machinery', 'label': 'Machinery', 'icon': Icons.build, 'period': 'year'},
+  {'key': 'machinery', 'label': 'Tools and Machinery', 'icon': Icons.build, 'period': 'year'},
   {'key': 'education', 'label': 'Education', 'icon': Icons.school, 'period': 'month'},
   {'key': 'healthcare', 'label': 'Healthcare', 'icon': Icons.local_hospital, 'period': 'month'},
   {'key': 'care', 'label': 'Care Homes', 'icon': Icons.elderly, 'period': 'month'},
-  {'key': 'furniture', 'label': 'Furniture', 'icon': Icons.chair, 'period': 'year'},
+  {'key': 'furniture', 'label': 'Furniture and Household Items', 'icon': Icons.chair, 'period': 'year'},
   {'key': 'services', 'label': 'Services', 'icon': Icons.miscellaneous_services, 'period': 'month'},
 ];
 
@@ -1928,7 +2143,7 @@ class _HeatingFuelScreenState extends State<HeatingFuelScreen> {
           {
             'value': 'natural_gas',
             'label': 'Mains Gas Heating',
-            'subtitle': 'Connected to the gas grid',
+            'subtitle': 'Most houses. You get gas from the grid not from bottles',
             'icon': Icons.local_fire_department,
           },
           {
@@ -2521,12 +2736,12 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
   final List<Map<String, String>> _options = [
     {'value': 'mini', 'label': 'Very Small Car', 'image': 'assets/images/car_mini.png', 'description': 'e.g. Fiat 500, Smart Car'},
     {'value': 'supermini', 'label': 'Small Car', 'image': 'assets/images/car_supermini.png', 'description': 'e.g. VW Polo, Ford Fiesta'},
-    {'value': 'lower_medium', 'label': 'Medium Car', 'image': 'assets/images/car_lower_medium.png', 'description': 'e.g. VW Golf, Ford Focus'},
-    {'value': 'upper_medium', 'label': 'Large Car', 'image': 'assets/images/car_upper_medium.png', 'description': 'e.g. BMW 3 Series, Audi A4'},
+    {'value': 'lower medium', 'label': 'Medium Car', 'image': 'assets/images/car_lower_medium.png', 'description': 'e.g. VW Golf, Ford Focus'},
+    {'value': 'upper medium', 'label': 'Large Car', 'image': 'assets/images/car_upper_medium.png', 'description': 'e.g. BMW 3 Series, Audi A4'},
     {'value': 'executive', 'label': 'Premium Car', 'image': 'assets/images/car_executive.png', 'description': 'e.g. BMW 5 Series, Mercedes E-Class'},
     {'value': 'luxury', 'label': 'Luxury Car', 'image': 'assets/images/car_luxury.png', 'description': 'e.g. Mercedes S-Class, Bentley'},
     {'value': 'sports', 'label': 'Sports Car', 'image': 'assets/images/car_sports.png', 'description': 'e.g. Porsche 911, Mazda MX-5'},
-    {'value': 'dual_purpose', 'label': 'SUV / 4x4', 'image': 'assets/images/car_suv.png', 'description': 'e.g. Toyota RAV4, VW Tiguan'},
+    {'value': 'dual purpose', 'label': 'SUV / 4x4', 'image': 'assets/images/car_suv.png', 'description': 'e.g. Toyota RAV4, VW Tiguan'},
     {'value': 'mpv', 'label': 'People Carrier', 'image': 'assets/images/car_mpv.png', 'description': 'e.g. Ford Galaxy, VW Sharan'},
   ];
 
@@ -2545,6 +2760,56 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
     profile.update();
   }
 
+  void _editCar(int index) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final car = profile.cars[index];
+    setState(() {
+      _selected = car['size'];
+      profile.currentCarSize = car['size'];
+      profile.currentCarFuel = car['fuel'];
+      profile.currentCarMileage = (car['mileage'] as num?)?.toDouble();
+    });
+    profile.cars.removeAt(index);
+    context.go('/car-fuel');
+  }
+
+  void _showDescription(Map<String, String> option) {
+    final isCurrentlySelected = _selected == option['value'];
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(option['label']!),
+          content: Text(option['description']!),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            if (isCurrentlySelected)
+              ElevatedButton(
+                onPressed: () {
+                  setState(() => _selected = null);
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                child: Text('Deselect'),
+              )
+            else
+              ElevatedButton(
+                onPressed: () {
+                  setState(() => _selected = option['value']);
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: kTransportBlue),
+                child: Text('Select this car type'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildCarsList(ProfileStore profile) {
     if (profile.cars.isEmpty) return SizedBox.shrink();
     return Container(
@@ -2561,13 +2826,26 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
         itemCount: profile.cars.length,
         itemBuilder: (context, index) {
           final car = profile.cars[index];
+          final sizeLabel = _options.firstWhere(
+            (opt) => opt['value'] == car['size'],
+            orElse: () => {'label': car['size'] ?? 'Unknown'},
+          )['label'];
           return ListTile(
             dense: true,
-            title: Text('${car['size']} • ${car['fuel']}', style: TextStyle(color: kText)),
+            title: Text('$sizeLabel • ${car['fuel']}', style: TextStyle(color: kText)),
             subtitle: Text('${car['mileage']} mi/wk', style: TextStyle(color: kTextSubtle, fontSize: 12)),
-            trailing: IconButton(
-              icon: Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-              onPressed: () => _removeCar(index),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.edit, color: kTransportBlue, size: 20),
+                  onPressed: () => _editCar(index),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  onPressed: () => _removeCar(index),
+                ),
+              ],
             ),
           );
         },
@@ -2586,12 +2864,19 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
       answered: true,
       backRoute: '/transport-intro',
       accentColor: kTransportBlue,
-      nextLabel: hasCars ? 'No more cars →' : 'No cars, let\'s move on →',
+      nextLabel: _selected != null
+        ? 'Next →'
+        : (hasCars ? 'No more cars →' : 'No cars, let\'s move on →'),
       onNext: () {
-        context.go('/bus-spend');
+        if (_selected != null) {
+          profile.currentCarSize = _selected;
+          context.go('/car-fuel');
+        } else {
+          context.go('/bus-spend');
+        }
       },
       answerContent: SizedBox(
-        height: 340,
+        height: 420,
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -2614,11 +2899,7 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
                 children: _options.map((opt) {
                   final isSelected = _selected == opt['value'];
                   return GestureDetector(
-                    onTap: () {
-                      final profile = Provider.of<ProfileStore>(context, listen: false);
-                      profile.currentCarSize = opt['value'];
-                      context.go('/car-fuel');
-                    },
+                    onTap: () => _showDescription(opt),
                     child: Container(
                       padding: EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -2729,6 +3010,11 @@ class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
   @override
   void initState() {
     super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.currentCarMileage != null) {
+      _controller.text = profile.currentCarMileage!.toString();
+      _hasValue = true;
+    }
     _controller.addListener(() {
       setState(() => _hasValue = _controller.text.trim().isNotEmpty);
     });
@@ -2753,6 +3039,7 @@ class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
         });
         profile.currentCarSize = null;
         profile.currentCarFuel = null;
+        profile.currentCarMileage = null;
         profile.update();
         context.go('/car-size');
       },
@@ -2822,7 +3109,7 @@ class _BusSpendScreenState extends State<BusSpendScreen> {
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    if (profile.monthlyBusSpend > 0) {
+    if (profile.busSpendAnswered) {
       _controller.text = profile.monthlyBusSpend.toString();
       _hasValue = true;
     }
@@ -2843,6 +3130,7 @@ class _BusSpendScreenState extends State<BusSpendScreen> {
       accentColor: kTransportBlue,
       onNext: () {
         profile.monthlyBusSpend = double.tryParse(_controller.text) ?? 0;
+        profile.busSpendAnswered = true;
         profile.update();
         context.go('/train-spend');
       },
@@ -2912,7 +3200,7 @@ class _TrainSpendScreenState extends State<TrainSpendScreen> {
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    if (profile.monthlyTrainSpend > 0) {
+    if (profile.trainSpendAnswered) {
       _controller.text = profile.monthlyTrainSpend.toString();
       _hasValue = true;
     }
@@ -2933,6 +3221,7 @@ class _TrainSpendScreenState extends State<TrainSpendScreen> {
       accentColor: kTransportBlue,
       onNext: () {
         profile.monthlyTrainSpend = double.tryParse(_controller.text) ?? 0;
+        profile.trainSpendAnswered = true;
         profile.update();
         context.go('/flights-intro');
       },
@@ -3064,7 +3353,7 @@ class FlightsGlobeScreen extends StatefulWidget {
   _FlightsGlobeScreenState createState() => _FlightsGlobeScreenState();
 }
 
-enum _TripStep { none, countryList, nights, accommodation, people }
+enum _TripStep { none, countryList, nights, accommodation, seatClass, people }
 
 class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
   late final EarthController _controller;
@@ -3080,6 +3369,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
   int? _editingIndex;
   double? _currentCo2;
   bool _showTripsList = false;
+  String? _selectedSeat;
 
   @override
   void initState() {
@@ -3087,6 +3377,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
     _controller = EarthController();
     _controller.setLightMode(EarthLightMode.followCamera);
     _controller.enableAutoRotate = true;
+    _controller.setZoom(1.5);
 
     _nightsController.addListener(() {
       setState(() => _hasNights = _nightsController.text.trim().isNotEmpty);
@@ -3152,7 +3443,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
       'nights': int.tryParse(_nightsController.text) ?? 0,
       'accommodation': _selectedAccommodation,
       'passengers': _selectedPeople,
-      'seat': 'economy',
+      'seat': _selectedSeat,
     };
     if (_editingIndex != null) {
       profile.flights[_editingIndex!] = tripData;
@@ -3169,6 +3460,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
       _selectedAccommodation = null;
       _selectedPeople = null;
       _editingIndex = null;
+      _selectedSeat = null;
     });
     _fetchLiveTotal();
   }
@@ -3184,6 +3476,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
       _selectedPeople = trip['passengers'];
       _editingIndex = index;
       _step = _TripStep.nights;
+      _selectedSeat = trip['seat'];
     });
   }
 
@@ -3357,7 +3650,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                 selected: _selectedAccommodation,
                 onSelect: (value) => setState(() {
                   _selectedAccommodation = value;
-                  _step = _TripStep.people;
+                  _step = _TripStep.seatClass;
                 }),
                 accentColor: kFlightsGreen,
                 options: [
@@ -3365,6 +3658,45 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                   {'value': 'airbnb', 'label': 'Airbnb / Rental', 'icon': Icons.house},
                   {'value': 'friends_family', 'label': 'With friends/family', 'icon': Icons.people},
                   {'value': 'hostel', 'label': 'Hostel', 'icon': Icons.bed},
+                ],
+              ),
+            ],
+          ),
+        );
+      
+      case _TripStep.seatClass:
+        return Container(
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          constraints: BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => setState(() => _step = _TripStep.accommodation),
+                ),
+              ),
+              Text('What class did you fly?',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  textAlign: TextAlign.center),
+              SizedBox(height: 16),
+              buildSingleSelectOptions(
+                selected: _selectedSeat,
+                onSelect: (value) => setState(() {
+                  _selectedSeat = value;
+                  _step = _TripStep.people;
+                }),
+                accentColor: kFlightsGreen,
+                options: [
+                  {'value': 'economy', 'label': 'Economy', 'icon': Icons.airline_seat_recline_normal},
+                  {'value': 'business', 'label': 'Business', 'icon': Icons.airline_seat_flat},
+                  {'value': 'first', 'label': 'First Class', 'icon': Icons.airline_seat_individual_suite},
                 ],
               ),
             ],
@@ -3386,7 +3718,7 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                 alignment: Alignment.topLeft,
                 child: IconButton(
                   icon: Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => setState(() => _step = _TripStep.accommodation),
+                  onPressed: () => setState(() => _step = _TripStep.seatClass),
                 ),
               ),
               Text('How many people from your household went?',
@@ -3436,11 +3768,6 @@ Widget build(BuildContext context) {
         icon: Icon(Icons.arrow_back, color: kText),
         onPressed: () => context.go('/flights-intro'),
       ),
-      title: Text(
-        'Your recent holidays',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText),
-      ),
-      centerTitle: true,
       actions: [
         if (_currentCo2 != null)
           Padding(
@@ -3463,7 +3790,7 @@ Widget build(BuildContext context) {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
-            value: 0.625,
+            value: 0.45,
             minHeight: 8,
             backgroundColor: kBorder,
             valueColor: AlwaysStoppedAnimation<Color>(kFlightsGreen),
@@ -3472,61 +3799,86 @@ Widget build(BuildContext context) {
       ),
     ),
     body: SafeArea(
-      child: Stack(
+      child: Column(
         children: [
-          Center(
-            child: GestureDetector(
-              onPanStart: (_) => _controller.enableAutoRotate = false,
-              child: Earth3D(
-                controller: _controller,
-                texture: const AssetImage('assets/images/2k_earth-day.jpg'),
-                initialScale: 3,
-              ),
-            ),
-          ),
           if (_step == _TripStep.none)
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: 32,
+            Padding(
+              padding: EdgeInsets.fromLTRB(24, 20, 24, 8),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_showTripsList) _buildTripsList(),
-                  if (Provider.of<ProfileStore>(context, listen: false).flights.isNotEmpty)
-                    TextButton(
-                      onPressed: () => setState(() => _showTripsList = !_showTripsList),
-                      child: Text(
-                        _showTripsList ? 'Hide trips' : 'See trips',
-                        style: TextStyle(color: kFlightsGreen, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/uk-intro'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kFlightsGreen,
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        Provider.of<ProfileStore>(context, listen: false).flights.isEmpty
-                            ? 'No flights →'
-                            : 'No more flights →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ),
+                  Text(
+                    'Your recent holidays',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Tap the globe to select your recent holiday destination',
+                    style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
-          if (_step != _TripStep.none)
-            Positioned.fill(
-              child: Center(
-                child: _buildOverlayPanel(),
-              ),
+          Expanded(
+            child: Stack(
+              children: [
+                Center(
+                  child: GestureDetector(
+                    onPanStart: (_) => _controller.enableAutoRotate = false,
+                    child: Earth3D(
+                      controller: _controller,
+                      texture: const AssetImage('assets/images/2k_earth-day.jpg'),
+                      initialScale: 3.0,
+                    ),
+                  ),
+                ),
+                if (_step == _TripStep.none)
+                  Positioned(
+                    left: 24,
+                    right: 24,
+                    bottom: 32,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_showTripsList) _buildTripsList(),
+                        if (Provider.of<ProfileStore>(context, listen: false).flights.isNotEmpty)
+                          TextButton(
+                            onPressed: () => setState(() => _showTripsList = !_showTripsList),
+                            child: Text(
+                              _showTripsList ? 'Hide trips' : 'See trips',
+                              style: TextStyle(color: kFlightsGreen, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => context.go('/uk-intro'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kFlightsGreen,
+                              padding: EdgeInsets.symmetric(vertical: 18),
+                              shape: StadiumBorder(),
+                            ),
+                            child: Text(
+                              Provider.of<ProfileStore>(context, listen: false).flights.isEmpty
+                                  ? 'No flights →'
+                                  : 'No more flights →',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_step != _TripStep.none)
+                  Positioned.fill(
+                    child: Center(
+                      child: _buildOverlayPanel(),
+                    ),
+                  ),
+              ],
             ),
+          ),
         ],
       ),
     ),
@@ -3864,6 +4216,9 @@ class PetsQuestionScreen extends StatefulWidget {
 
 class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
   List<Map<String, dynamic>> _pets = [];
+  bool get _allPetsComplete {
+    return _pets.every((pet) => pet['food'] != null && pet['weight'] != null);
+  }
 
   @override
   void initState() {
@@ -3924,8 +4279,8 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
         'type': type,
         'name': '',
         'food': null,
-        'brand': null,
-        'diet': null,
+        'brand': 'standard',
+        'diet': 'meaty',
         'weight': null,
       });
     });
@@ -3959,7 +4314,7 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
     return QuizFrame(
       progress: 0.78125,
       question: 'Do you have any pets?',
-      answered: true,
+      answered: _allPetsComplete,
       accentColor: kPetsPurple,
       backRoute: '/pets-intro',
       onNext: () {
@@ -4432,7 +4787,7 @@ class _FoodWasteScreenState extends State<FoodWasteScreen> {
           },
           {
             'value': 'compost',
-            'label': 'I try to compost it',
+            'label': 'I try to compost it/put it in the green bin',
             'icon': Icons.compost,
           },
         ],
@@ -4780,6 +5135,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
     _calculate();
   }
 
+
+  Map<String, dynamic> _getComparisonStats(double totalCo2, int treeAmount) {
+    final milesDriven = totalCo2 / 0.404; // kg CO2 per mile, average petrol car
+    final ukHomeYears = totalCo2 / 5300; // kg CO2 per year, average UK home energy
+    final flightsLondonNYC = totalCo2 / 986; // kg CO2 per return flight
+    final cows = totalCo2 / 2500; // kg CO2 per cow for a year
+    final hoursBurnt = totalCo2 / 2.4; // kg CO2 per hour of burning a campfire
+    final footballPitchesOfTrees = treeAmount / 1000; // how many football pitches you can fill with the CO2 from trees
+
+    return {
+      'miles_driven': milesDriven.round(),
+      'uk_home_years': ukHomeYears.toStringAsFixed(1),
+      'flights_london_ny': flightsLondonNYC.toStringAsFixed(1),
+      'number_of_cows': cows.round(),
+      'hours_burnt': hoursBurnt.toStringAsFixed(1),
+      'football_pitches': footballPitchesOfTrees.toStringAsFixed(1),
+    };
+  }
+
   Future<void> _calculate() async {
     final profile = Provider.of<ProfileStore>(context, listen: false);
     try {
@@ -4883,36 +5257,46 @@ class _ResultsScreenState extends State<ResultsScreen> {
         SizedBox(height: 32),
 
         // Total
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: kPrimary.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: kPrimary),
-          ),
-          child: Column(
-            children: [
-              Text(
-                'Your household\'s annual footprint',
-                style: TextStyle(color: kText, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: kPrimary.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kPrimary),
               ),
-              SizedBox(height: 8),
-              Text(
-                '${(total / 1000).toStringAsFixed(1)} tonnes CO₂e',
-                style: TextStyle(
-                    fontSize: 36, fontWeight: FontWeight.bold, color: kText),
-                textAlign: TextAlign.center,
+              child: Column(
+                children: [
+                  Text(
+                    'Your household\'s annual footprint',
+                    style: TextStyle(color: kText, fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '${(total / 1000).toStringAsFixed(1)} tonnes CO₂e',
+                    style: TextStyle(
+                        fontSize: 36, fontWeight: FontWeight.bold, color: kText),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'This is equivalent to the CO2 stored in $treeAmount trees',
+                    style: TextStyle(fontSize: 12, color: kTextSubtle),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              SizedBox(height: 4),
-              Text(
-                'This is equivalent to the CO2 stored in $treeAmount trees',
-                style: TextStyle(fontSize: 12, color: kTextSubtle),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+            ),
+            Positioned(
+              top: -23,
+              right: -20,
+              child: ComparisonBadge(stats: _getComparisonStats(total, treeAmount)),
+            ),
+          ],
         ),
         SizedBox(height: 24),
 
@@ -5054,7 +5438,7 @@ class _LoginReminderScreenState extends State<LoginReminderScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.save_outlined, color: kPrimary, size: 64),
+                Image.asset('assets/images/leaf_icon.png', height: 64),
                 SizedBox(height: 32),
                 Text(
                   'Save your progress',
@@ -5071,7 +5455,7 @@ class _LoginReminderScreenState extends State<LoginReminderScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => context.go('/login?redirect=/phase2'),
+                    onPressed: () => context.go('/login?redirect=/quiz'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kPrimary,
                       padding: EdgeInsets.symmetric(vertical: 18),
@@ -5084,7 +5468,7 @@ class _LoginReminderScreenState extends State<LoginReminderScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () => context.go('/phase2'),
+                    onPressed: () => context.go('/quiz'),
                     style: OutlinedButton.styleFrom(
                       padding: EdgeInsets.symmetric(vertical: 18),
                       side: BorderSide(color: kBorder),
@@ -5105,88 +5489,6 @@ class _LoginReminderScreenState extends State<LoginReminderScreen> {
   }
 }
 
-// ── Phase 2 Screen ─────────────────────────────────────────────────────────
-class Phase2Screen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/results'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                // Logo/icon
-                Image.asset(
-                  'assets/images/leaf_icon.png',
-                  height: 64,
-                ),
-                SizedBox(height: 32),
-
-                // Title
-                Text(
-                  'Phase 2',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    height: 1.1,
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // Subtitle
-                Text(
-                  'About you and your house',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: kTextSubtle,
-                    height: 1.5,
-                  ),
-                ),
-                SizedBox(height: 48),
-
-                // Start button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/quiz'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimary,
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Ready?',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),   
-      ),     
-    );       
-  }
-}
 
 // ── Quiz Screen ─────────────────────────────────────────────────────────
 class QuizScreen extends StatelessWidget {
@@ -5198,7 +5500,7 @@ class QuizScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/phase2'),
+          onPressed: () => context.go('/results'),
         ),
         actions: [
           _authBarButton(context),
@@ -5295,111 +5597,271 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
+    final profile = Provider.of<ProfileStore>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/quiz'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
+    return QuizFrame(
+      progress: 0.0,
+      question: 'Which of these do you already have?',
+      subheading: 'This stops us recommending things you\'ve already done.',
+      answered: true,
+      backRoute: '/quiz',
+      onNext: () {
+        profile.smartThermostat = _smartThermostat;
+        profile.savingSockets = _savingSockets;
+        profile.batteryStorage = _batteryStorage;
+        profile.savingShower = _savingShower;
+        profile.update();
+        context.go('/property-type');
+      },
+      answerContent: Column(
+        children: [
+          CheckboxListTile(
+            value: _smartThermostat,
+            onChanged: (value) => setState(() => _smartThermostat = value!),
+            title: Text('Smart thermostat', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _savingSockets,
+            onChanged: (value) => setState(() => _savingSockets = value!),
+            title: Text('Energy-saving sockets', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _batteryStorage,
+            onChanged: (value) => setState(() => _batteryStorage = value!),
+            title: Text('Battery storage', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _savingShower,
+            onChanged: (value) => setState(() => _savingShower = value!),
+            title: Text('Water-saving shower head', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 0),
-                  Text(
-                    'Energy Actions',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-                  progressBar(0.0),
-                  SizedBox(height: 24),
+    );
+  }
+}
 
-                  Text(
-                    'Which of these do you already have?',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'This stops us recommending things you\'ve already done.',
-                    style: TextStyle(color: kTextSubtle),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 24),
+// ── Property Type Question ────────────────────────────────────────────────
+class PropertyTypeScreen extends StatefulWidget {
+  @override
+  _PropertyTypeScreenState createState() => _PropertyTypeScreenState();
+}
 
-                  CheckboxListTile(
-                    value: _smartThermostat,
-                    onChanged: (value) => setState(() => _smartThermostat = value!),
-                    title: Text('Smart thermostat', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _savingSockets,
-                    onChanged: (value) => setState(() => _savingSockets = value!),
-                    title: Text('Energy-saving sockets', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _batteryStorage,
-                    onChanged: (value) => setState(() => _batteryStorage = value!),
-                    title: Text('Battery storage', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _savingShower,
-                    onChanged: (value) => setState(() => _savingShower = value!),
-                    title: Text('Water-saving shower head', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
+class _PropertyTypeScreenState extends State<PropertyTypeScreen> {
+  String? _selected;
 
-                  SizedBox(height: 32),
+  final List<Map<String, dynamic>> _options = [
+    {'value': 'detached', 'label': 'Detached', 'image': 'assets/images/house_detached.png'},
+    {'value': 'semi_detached', 'label': 'Semi-Detached', 'image': 'assets/images/house_semi_detached.png'},
+    {'value': 'terraced', 'label': 'Terraced', 'image': 'assets/images/house_terraced.png'},
+    {'value': 'bungalow', 'label': 'Bungalow', 'image': 'assets/images/house_bungalow.png'},
+    {'value': 'flat', 'label': 'Flat', 'image': 'assets/images/house_flat.png'},
+  ];
 
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        profile.smartThermostat = _smartThermostat;
-                        profile.savingSockets = _savingSockets;
-                        profile.batteryStorage = _batteryStorage;
-                        profile.savingShower = _savingShower;
-                        profile.update();
-                        context.go('/homeinfo');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.propertyTypeAnswered ? profile.propertyType : null;
+  }
+
+  Widget _buildBox(Map<String, dynamic> opt) {
+    final isSelected = _selected == opt['value'];
+    return GestureDetector(
+      onTap: () => setState(() => _selected = opt['value']),
+      child: Container(
+        width: 135,
+        height: 135,
+        margin: EdgeInsets.symmetric(horizontal: 4),
+        padding: EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected ? kPrimary.withOpacity(0.15) : kSurface,
+          border: Border.all(color: isSelected ? kPrimary : kBorder, width: isSelected ? 2 : 1),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: 62,
+              child: Image.asset(
+                opt['image'] as String,
+                fit: BoxFit.contain,
+                color: isSelected ? kPrimary : kTextSubtle,
+                colorBlendMode: BlendMode.srcIn,
               ),
             ),
+            SizedBox(height: 8),
+            Text(
+              opt['label'] as String,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: kText),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.0769,
+      question: 'What type of property do you live in?',
+      answered: _selected != null,
+      backRoute: '/energyaction',
+      onNext: () {
+        profile.propertyType = _selected!;
+        profile.propertyTypeAnswered = true;
+        profile.update();
+        context.go('/wall-type');
+      },
+      answerContent: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: _options.take(3).map((opt) => _buildBox(opt)).toList(),
+          ),
+          SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: _options.skip(3).map((opt) => _buildBox(opt)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Wall Type Question ────────────────────────────────────────────────
+class WallTypeScreen extends StatefulWidget {
+  @override
+  _WallTypeScreenState createState() => _WallTypeScreenState();
+}
+
+class _WallTypeScreenState extends State<WallTypeScreen> {
+  bool? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.wallTypeAnswered ? (profile.wallType == 'cavity') : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.1538,
+      question: 'What type of walls does your property have?',
+      answered: _selected != null,
+      backRoute: '/property-type',
+      onNext: () {
+        profile.wallType = _selected! ? 'cavity' : 'solid_wall';
+        profile.wallTypeAnswered = true;
+        profile.update();
+        context.go('/boiler-age');
+      },
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        leftLabel: 'Cavity',
+        leftImage: 'assets/images/cavity_wall.png',
+        leftSubtitle: 'Cavity walls have a small gap inside. The walls show only the long sides of the bricks. ',
+        rightLabel: 'Solid Wall',
+        rightImage: 'assets/images/solid_wall.png',
+        rightSubtitle: 'Usually found in pre-1930\'s houses. The walls show a mix of long brick sides and short ends pointing outwards.',
+      ),
+    );
+  }
+}
+
+// ── Boiler Age Question ───────────────────────────────────────────────
+class BoilerAgeScreen extends StatefulWidget {
+  @override
+  _BoilerAgeScreenState createState() => _BoilerAgeScreenState();
+}
+
+class _BoilerAgeScreenState extends State<BoilerAgeScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.boilerAnswered ? profile.boilerAge : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.2307,
+      question: 'How old is your boiler?',
+      answered: _selected != null,
+      backRoute: '/wall-type',
+      onNext: () {
+        profile.boilerAge = _selected!;
+        profile.boilerAnswered = true;
+        profile.update();
+        context.go('/lightbulbs');
+      },
+      answerContent: SizedBox(
+        height: 420,
+        child: SingleChildScrollView(
+          child: buildSingleSelectOptions(
+            selected: _selected,
+            onSelect: (value) => setState(() => _selected = value),
+            options: [
+              {
+                'value': 'unsure',
+                'label': 'I don\'t know!',
+                'image': 'assets/images/1.png',
+              },
+              {
+                'value': '< 10',
+                'label': 'Less than 10 years old',
+                'image': 'assets/images/2.png',
+              },
+              {
+                'value': '10-15',
+                'label': '10-15 years',
+                'image': 'assets/images/3.png',
+              },
+              {
+                'value': '15-20',
+                'label': '15-20 years',
+                'image': 'assets/images/4.png',
+              },
+              {
+                'value': '20-25',
+                'label': '20-25 years',
+                'image': 'assets/images/5.png',
+              },
+              {
+                'value': '> 25',
+                'label': 'Over 25 years old',
+                'image': 'assets/images/6.png',
+              },
+            ],
           ),
         ),
       ),
@@ -5407,236 +5869,203 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
   }
 }
 
-// ── Home Info Screen ────────────────────────────────────────────────────
-class HomeInfoScreen extends StatefulWidget {
+// ── Lightbulbs Question ───────────────────────────────────────────────
+class LightbulbsScreen extends StatefulWidget {
   @override
-  _HomeInfoScreenState createState() => _HomeInfoScreenState();
+  _LightbulbsScreenState createState() => _LightbulbsScreenState();
 }
 
-class _HomeInfoScreenState extends State<HomeInfoScreen> {
-  final _incandescentController = TextEditingController(text: '0');
-  final _cflController = TextEditingController(text: '0');
-  final _ledController = TextEditingController(text: '0');
-  String _propertyType = 'semi_detached';
-  String _boilerAge = '10-15';
-  String _showerType = 'power_mixer';
-  String _wallType = 'cavity';
+class _LightbulbsScreenState extends State<LightbulbsScreen> {
+  int _incandescent = 0;
+  int _cfl = 0;
+  int _led = 0;
+
+  final List<Map<String, dynamic>> _bulbTypes = [
+    {'key': 'incandescent', 'label': 'Incandescent (old-style)', 'subtitle': 'The classic glowing filament bulb', 'image': 'assets/images/incandescent.png'},
+    {'key': 'cfl', 'label': 'CFL (energy-saving spiral)', 'subtitle': 'The curly, compact fluorescent bulb', 'image': 'assets/images/cfl.png'},
+    {'key': 'led', 'label': 'LED', 'subtitle': 'Modern, most energy-efficient', 'image': 'assets/images/led.png'},
+  ];
 
   @override
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _incandescentController.text = profile.incandescentBulbs > 0 ? profile.incandescentBulbs.toString() : '0';
-    _cflController.text = profile.cflBulbs > 0 ? profile.cflBulbs.toString() : '0';
-    _ledController.text = profile.ledBulbs > 0 ? profile.ledBulbs.toString() : '0';
-    _propertyType = profile.propertyType;
-    _boilerAge = profile.boilerAge;
-    _showerType = profile.showerType;
-    _wallType = profile.wallType;
+    _incandescent = profile.incandescentBulbs;
+    _cfl = profile.cflBulbs;
+    _led = profile.ledBulbs;
+  }
+
+  int _getCount(String key) {
+    switch (key) {
+      case 'incandescent': return _incandescent;
+      case 'cfl': return _cfl;
+      case 'led': return _led;
+      default: return 0;
+    }
+  }
+
+  void _setCount(String key, int value) {
+    setState(() {
+      switch (key) {
+        case 'incandescent': _incandescent = value; break;
+        case 'cfl': _cfl = value; break;
+        case 'led': _led = value; break;
+      }
+    });
+  }
+
+  void _showCounterDialog(Map<String, dynamic> bulb) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        int tempValue = _getCount(bulb['key'] as String);
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(bulb['label'] as String),
+              content: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: tempValue > 0 ? () => setDialogState(() => tempValue--) : null,
+                    icon: Icon(Icons.remove_circle_outline, color: kPrimary),
+                  ),
+                  SizedBox(width: 16),
+                  Text('$tempValue', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 16),
+                  IconButton(
+                    onPressed: () => setDialogState(() => tempValue++),
+                    icon: Icon(Icons.add_circle_outline, color: kPrimary),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _setCount(bulb['key'] as String, tempValue);
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                  child: Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
+    final profile = Provider.of<ProfileStore>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/energyaction'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 0),
-                  Text(
-                    'Home Info',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-                  progressBar(0.25),
-                  SizedBox(height: 24),
-
-                  Text(
-                    'Tell us about your property',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-
-                  Text('Property type',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _propertyType,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'detached', child: Text('Detached')),
-                      DropdownMenuItem(value: 'semi_detached', child: Text('Semi-Detached')),
-                      DropdownMenuItem(value: 'terraced', child: Text('Terraced')),
-                      DropdownMenuItem(value: 'bungalow', child: Text('Bungalow')),
-                      DropdownMenuItem(value: 'flat', child: Text('Flat')),
-                    ],
-                    onChanged: (value) => setState(() => _propertyType = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  Text('What type of walls does your property have?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 4),
-                  Text(
-                    'Not sure? Cavity walls have a small gap inside; solid walls are typically found in older properties (pre-1930s).',
-                    style: TextStyle(color: kTextSubtle, fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _wallType,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'cavity', child: Text('Cavity wall')),
-                      DropdownMenuItem(value: 'solid_wall', child: Text('Solid wall')),
-                    ],
-                    onChanged: (value) => setState(() => _wallType = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  Text('How old is your boiler?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _boilerAge,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'unsure', child: Text('I\'m not sure')),
-                      DropdownMenuItem(value: '< 10', child: Text('Less than 10 years')),
-                      DropdownMenuItem(value: '10-15', child: Text('10-15 years')),
-                      DropdownMenuItem(value: '15-20', child: Text('15-20 years')),
-                      DropdownMenuItem(value: '20-25', child: Text('20-25 years')),
-                      DropdownMenuItem(value: '> 25', child: Text('More than 25 years')),
-                    ],
-                    onChanged: (value) => setState(() => _boilerAge = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  Text('How many incandescent (old-style) bulbs do you have?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _incandescentController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(hintText: 'e.g. 4'),
-                  ),
-                  SizedBox(height: 24),
-
-                  Text('How many CFL (energy-saving spiral) bulbs do you have?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _cflController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(hintText: 'e.g. 2'),
-                  ),
-                  SizedBox(height: 24),
-
-                  Text('How many LED bulbs do you have?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _ledController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(hintText: 'e.g. 6'),
-                  ),
-                  SizedBox(height: 24),
-
-                  Text('What type of shower do you have?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _showerType,
-                    selectedItemBuilder: (context) => [
-                      Text('Power / Mixer Shower'),
-                      Text('Electric Shower'),
-                    ],
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'power_mixer',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Power / Mixer Shower'),
-                            Text('Uses hot water from your boiler or hot water tank. Attached directly to the wall', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'electric_shower',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Electric Shower'),
-                            Text('Has its own heating unit - usually a box on the wall above the shower', style: TextStyle(fontSize: 12, color: kTextSubtle)),
-                          ],
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) => setState(() => _showerType = value!),
-                  ),
-
-                  SizedBox(height: 32),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        profile.incandescentBulbs = int.tryParse(_incandescentController.text) ?? 0;
-                        profile.cflBulbs = int.tryParse(_cflController.text) ?? 0;
-                        profile.ledBulbs = int.tryParse(_ledController.text) ?? 0;
-                        profile.propertyType = _propertyType;
-                        profile.boilerAge = _boilerAge;
-                        profile.showerType = _showerType;
-                        profile.wallType = _wallType;
-                        profile.update();
-                        context.go('/insulation');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    return QuizFrame(
+      progress: 0.3076,
+      question: 'How many of each type of bulb do you have?',
+      answered: true,
+      backRoute: '/boiler-age',
+      onNext: () {
+        profile.incandescentBulbs = _incandescent;
+        profile.cflBulbs = _cfl;
+        profile.ledBulbs = _led;
+        profile.update();
+        context.go('/shower-type');
+      },
+      answerContent: Column(
+        children: _bulbTypes.map((bulb) {
+          final count = _getCount(bulb['key'] as String);
+          return Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: GestureDetector(
+              onTap: () => _showCounterDialog(bulb),
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: count > 0 ? kPrimary.withOpacity(0.1) : kSurface,
+                  border: Border.all(color: count > 0 ? kPrimary : kBorder, width: count > 0 ? 2 : 1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      height: 41,
+                      width: 41,
+                      child: Image.asset(
+                        bulb['image'] as String,
+                        fit: BoxFit.contain,
+                        color: count > 0 ? kPrimary : kTextSubtle,
+                        colorBlendMode: BlendMode.srcIn,
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(bulb['label'] as String, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kText)),
+                          SizedBox(height: 2),
+                          Text(bulb['subtitle'] as String, style: TextStyle(fontSize: 12, color: kTextSubtle)),
+                        ],
+                      ),
+                    ),
+                    Text('$count', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kPrimary)),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ── Shower Type Question ────────────────────────────────────────────────
+class ShowerTypeScreen extends StatefulWidget {
+  @override
+  _ShowerTypeScreenState createState() => _ShowerTypeScreenState();
+}
+
+class _ShowerTypeScreenState extends State<ShowerTypeScreen> {
+  bool? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.showerTypeAnswered ? (profile.showerType == 'power_mixer') : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.3845,
+      question: 'What type of shower do you have?',
+      answered: _selected != null,
+      backRoute: '/lightbulbs',
+      onNext: () {
+        profile.showerType = _selected! ? 'power_mixer' : 'electric_shower';
+        profile.showerTypeAnswered = true;
+        profile.update();
+        context.go('/loft-insulation');
+      },
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        leftLabel: 'Power / Mixer Shower',
+        leftIcon: Icons.shower,
+        leftSubtitle: 'Uses hot water from your boiler or hot water tank. Attached directly to the wall.',
+        rightLabel: 'Electric Shower',
+        rightIcon: Icons.bolt,
+        rightSubtitle: 'Has its own heating unit - usually a box on the wall above the shower.',
       ),
     );
   }
@@ -6072,88 +6501,6 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
   }
 }
 
-// ── Phase 3 Screen ─────────────────────────────────────────────────────────
-class Phase3Screen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/homeowner'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                // Logo/icon
-                Image.asset(
-                  'assets/images/leaf_icon.png',
-                  height: 64,
-                ),
-                SizedBox(height: 32),
-
-                // Title
-                Text(
-                  'Phase 3',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    height: 1.1,
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // Subtitle
-                Text(
-                  'Reduction Actions',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: kTextSubtle,
-                    height: 1.5,
-                  ),
-                ),
-                SizedBox(height: 48),
-
-                // Start button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/actions'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimary,
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Get Started',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),   
-      ),     
-    );       
-  }
-}
 
 // ── Actions / Recommendations Screen ───────────────────────────────────────────
 class ActionScreen extends StatefulWidget { //create a state where this screen can always live

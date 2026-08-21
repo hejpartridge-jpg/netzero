@@ -32,8 +32,11 @@ class ProfileStore extends ChangeNotifier {
   List<Map<String, dynamic>> cars = [];
   String? currentCarSize;
   String? currentCarFuel;
+  double? currentCarMileage;
   double monthlyBusSpend = 0;
   double monthlyTrainSpend = 0;
+  bool busSpendAnswered = false;
+  bool trainSpendAnswered = false;
 
   // ── Flights & Accommodation ────────────────────────────
   List<Map<String, dynamic>> flights = [];
@@ -86,10 +89,14 @@ class ProfileStore extends ChangeNotifier {
   int cflBulbs = 0;
   int ledBulbs = 0;
   String propertyType = 'semi_detached';
+  bool propertyTypeAnswered = false;
   String boilerAge = '10-15';
+  bool boilerAnswered = false;
   String showerType = 'power_mixer';
+  bool showerTypeAnswered = false;
   bool savingShower = false;
   String wallType = 'cavity';
+  bool wallTypeAnswered = false;
   
   // ── Insulation Questions ───────────────────────────────────────────
   String insulationThickness = '0mm';
@@ -189,8 +196,14 @@ class ProfileStore extends ChangeNotifier {
       'fuel_type_answered': fuelTypeAnswered,
       'hob_type_answered': hobTypeAnswered,
       'tariff_answered': tariffAnswered,
+      'bus_spend_answered': busSpendAnswered,
+      'train_spend_answered': trainSpendAnswered,
       'waste_answered': wasteAnswered,
       'food_waste_answered': foodWasteAnswered,
+      'property_type_answered': propertyTypeAnswered,
+      'wall_type_answered': wallTypeAnswered,
+      'boiler_answered': boilerAnswered,
+      'shower_type_answered': showerTypeAnswered,
     };
   }
 
@@ -223,6 +236,8 @@ class ProfileStore extends ChangeNotifier {
     }
     monthlyBusSpend = _d(data['monthly_bus_spend'], monthlyBusSpend);
     monthlyTrainSpend = _d(data['monthly_train_spend'], monthlyTrainSpend);
+    busSpendAnswered = data['bus_spend_answered'] as bool? ?? busSpendAnswered;
+    trainSpendAnswered = data['train_spend_answered'] as bool? ?? trainSpendAnswered;
     hotelNights = _d(data['uk_hotel_nights'], hotelNights);
     airbnbNights = _d(data['uk_airbnb_nights'], airbnbNights);
 
@@ -266,7 +281,9 @@ class ProfileStore extends ChangeNotifier {
     cflBulbs = _i(data['cfl_bulbs'], cflBulbs);
     ledBulbs = _i(data['led_bulbs'], ledBulbs);
     propertyType = _s(data['property_type'], propertyType);
+    propertyTypeAnswered = data['property_type_answered'] as bool? ?? propertyTypeAnswered;
     boilerAge = _s(data['boiler_age'], boilerAge);
+    boilerAnswered = data['boiler_answered'] as bool? ?? boilerAnswered;
     insulationThickness = _s(data['loft_thickness'], insulationThickness);
     windowDP = _b(data['window_draught_proofing'], windowDP);
     doorDP = _b(data['door_draught_proofing'], doorDP);
@@ -274,7 +291,9 @@ class ProfileStore extends ChangeNotifier {
     radiatorPanels = _b(data['radiator_panels'], radiatorPanels);
     showerType = _s(data['shower_type'], showerType);
     savingShower = _b(data['water_saving_shower'], savingShower);
+    showerTypeAnswered = data['shower_type_answered'] as bool? ?? showerTypeAnswered;
     wallType = _s(data['wall_type'], wallType);
+    wallTypeAnswered = data['wall_type_answered'] as bool? ?? wallTypeAnswered;
     wallInsulation = _b(data['wall_insulation'], wallInsulation);
     floorInsulation = _b(data['floor_insulation'], floorInsulation);
     showerTime = _i(data['shower_time'], showerTime);

@@ -64,26 +64,26 @@ def calculate_annual_car_cost(profile: dict) -> float:
 # Essentially what I put in the terminal
 # It is now in a way where it takes user inputs from flutter, stores them in a dictionary, and now pastes those dictionary inputs in here!
 def calculate_total_emissions(profile: dict) -> dict:
-    
-    num_people = profile["num_people"]
-    
+
+    num_people = profile.get("num_people", 0)
+
     # HOME
     gas_co2   = calculate_gas_emissions(
-                    profile["annual_gas_kwh"], 
-                    profile["fuel_type"])
+                    profile.get("annual_gas_kwh", 0),
+                    profile.get("fuel_type", "natural_gas"))
     elec_co2  = calculate_electricity_emissions(
-                    profile["annual_electricity_kwh"],
-                    profile["tariff"],
+                    profile.get("annual_electricity_kwh", 0),
+                    profile.get("tariff", "standard"),
                     profile.get("solar_self_consumed_kwh", 0))
     water_co2 = calculate_water_emissions(
-                    profile["annual_water_m3"])
+                    profile.get("annual_water_m3", 0))
 
     # TRANSPORT
     car_co2   = calculate_car_emissions(profile.get("cars", []))
     bus_co2   = calculate_bus_emissions(
-                    profile["monthly_bus_spend"])
+                    profile.get("monthly_bus_spend", 0))
     train_co2 = calculate_train_emissions(
-                    profile["monthly_train_spend"])
+                    profile.get("monthly_train_spend", 0))
     flight_co2 = calculate_flight_emissions(profile.get("flights", []))
     abroad_co2 = calculate_abroad_accomodation_emissions(profile.get("flights", []))
     uk_co2    = calculate_uk_accomodation_emissions(
@@ -93,36 +93,38 @@ def calculate_total_emissions(profile: dict) -> dict:
 
     # DIET
     red_meat_co2  = calculate_red_meat_emissions(
-                    profile["rm_days"], num_people)
+                    profile.get("rm_days", 0), num_people)
     white_meat_co2 = calculate_white_meat_emissions(
-                    profile["wm_days"], num_people)
+                    profile.get("wm_days", 0), num_people)
     food_co2      = calculate_food_emissions(
-                    profile["non_meat_spend"], profile["rm_days"], profile["wm_days"], num_people)
-    
+                    profile.get("non_meat_spend", 0),
+                    profile.get("rm_days", 0),
+                    profile.get("wm_days", 0), num_people)
+
     # WASTE
     food_waste_co2 = calculate_food_waste_emissions(
-                    profile["food_waste_action"], num_people)
+                    profile.get("food_waste_action"), num_people)
     waste_co2     = calculate_household_waste_emissions(
-                    profile["waste_action"], num_people)
+                    profile.get("waste_action"), num_people)
 
     # PETS
     pet_co2 = calculate_pet_food_emissions(profile.get("pets", []))
 
     # SPENDING
-    takeaway_co2   = calculate_takeaway_emissions(profile["monthly_takeaway"])
-    drinks_co2     = calculate_drink_emissions(profile["monthly_drinks"])
-    alcohol_co2    = calculate_alcohol_emissions(profile["monthly_alcohol"])
-    tobacco_co2    = calculate_tobacco_emissions(profile["monthly_tobacco"])
-    clothes_co2    = calculate_clothes_emissions(profile["monthly_clothes"])
-    soap_co2       = calculate_soap_emissions(profile["monthly_soap"])
-    medicine_co2   = calculate_medicine_emissions(profile["monthly_medicine"])
-    electronics_co2 = calculate_electronics_emissions(profile["yearly_electronics"])
-    machinery_co2  = calculate_machinery_emissions(profile["yearly_machinery"])
-    education_co2  = calculate_education_emissions(profile["monthly_education"])
-    healthcare_co2 = calculate_healthcare_emissions(profile["monthly_healthcare"])
-    care_co2       = calculate_care_home_emissions(profile["monthly_care"])
-    furniture_co2  = calculate_furniture_emissions(profile["yearly_furniture"])
-    services_co2   = calculate_services_emissions(profile["monthly_services"])
+    takeaway_co2   = calculate_takeaway_emissions(profile.get("monthly_takeaway", 0))
+    drinks_co2     = calculate_drink_emissions(profile.get("monthly_drinks", 0))
+    alcohol_co2    = calculate_alcohol_emissions(profile.get("monthly_alcohol", 0))
+    tobacco_co2    = calculate_tobacco_emissions(profile.get("monthly_tobacco", 0))
+    clothes_co2    = calculate_clothes_emissions(profile.get("monthly_clothes", 0))
+    soap_co2       = calculate_soap_emissions(profile.get("monthly_soap", 0))
+    medicine_co2   = calculate_medicine_emissions(profile.get("monthly_medicine", 0))
+    electronics_co2 = calculate_electronics_emissions(profile.get("yearly_electronics", 0))
+    machinery_co2  = calculate_machinery_emissions(profile.get("yearly_machinery", 0))
+    education_co2  = calculate_education_emissions(profile.get("monthly_education", 0))
+    healthcare_co2 = calculate_healthcare_emissions(profile.get("monthly_healthcare", 0))
+    care_co2       = calculate_care_home_emissions(profile.get("monthly_care", 0))
+    furniture_co2  = calculate_furniture_emissions(profile.get("yearly_furniture", 0))
+    services_co2   = calculate_services_emissions(profile.get("monthly_services", 0))
 
     # ── TOTALS BY CATEGORY ──────────────────────────────────────────
     home_total      = gas_co2 + elec_co2 + water_co2
