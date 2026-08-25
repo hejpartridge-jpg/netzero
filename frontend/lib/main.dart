@@ -17,8 +17,9 @@ import 'package:flutter_globe_3d/flutter_globe_3d.dart';
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:math' as Math;
 
-const bool kUnderConstruction = true;
+const bool kUnderConstruction = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +36,7 @@ void main() async {
 
 // ── Router ──────────────────────────────────────────────
 final _router = GoRouter(
-  initialLocation: '/welcome',
+  initialLocation: '/auth',
   observers: [Earth3D.routeObserver],
   redirect: (context, state) {
     final bypassKey = state.uri.queryParameters['preview'];
@@ -52,11 +53,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) {
-        final redirectTo = state.uri.queryParameters['redirect'] ?? '/info';
+        final redirectTo = state.uri.queryParameters['redirect'] ?? '/energy-intro';
         return LoginScreen(redirectTo: redirectTo);
       },
     ),    
-    GoRoute(path: '/welcome',      builder: (context, state) => WelcomeScreen()),
     GoRoute(path: '/info',         builder: (context, state) => InfoScreen()),
     GoRoute(path: '/energy-intro', builder: (context, state) => EnergyIntroScreen()),
     GoRoute(path: '/num-people', builder: (context, state) => NumPeopleScreen()),
@@ -104,12 +104,16 @@ final _router = GoRouter(
     GoRoute(path: '/boiler-age', builder: (context, state) => BoilerAgeScreen()),
     GoRoute(path: '/lightbulbs', builder: (context, state) => LightbulbsScreen()),
     GoRoute(path: '/shower-type', builder: (context, state) => ShowerTypeScreen()),
-    GoRoute(path: '/insulation',   builder: (context, state) => InsulationScreen()),
-    GoRoute(path: '/habit',        builder: (context, state) => HabitScreen()),
+    GoRoute(path: '/loft-insulation', builder: (context, state) => InsulationThicknessScreen()),
+    GoRoute(path: '/insulation-types', builder: (context, state) => InsulationTypesScreen()),
+    GoRoute(path: '/shower-time', builder: (context, state) => ShowerTimeScreen()),
+    GoRoute(path: '/radiator-bleeding', builder: (context, state) => RadiatorBleedingScreen()),
+    GoRoute(path: '/washing-amount', builder: (context, state) => WashingAmountScreen()),
+    GoRoute(path: '/washing-temperature', builder: (context, state) => WashingTemperatureScreen()),
     GoRoute(path: '/homeowner',    builder: (context, state) => HomeownerScreen()),
     GoRoute(path: '/actions',      builder: (context, state) => ActionScreen()),
   ],
-);
+); 
 
 // ── Icons ─────────────────────────────────────────────────
 // --- Ligtning Bolt -----------------------------------------
@@ -945,6 +949,14 @@ class _ComparisonBadgeState extends State<ComparisonBadge> {
     );
   }
 }
+// ── Money Formatting ───────────────────────────
+String formatMoney(double value) {
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  } else {
+    return value.toStringAsFixed(2);
+  }
+}
 
 // ── Hover Reveal ───────────────────────────
 class HoverRevealField extends StatefulWidget {
@@ -1228,6 +1240,178 @@ const List<Map<String, dynamic>> spendingCategories = [
   {'key': 'services', 'label': 'Services', 'icon': Icons.miscellaneous_services, 'period': 'month'},
 ];
 
+// ── Leaf Fill Indicator ─────────────────────────────────────────────────
+class LeafFillIndicator extends StatelessWidget {
+  final double fillPercent; // 0.0 to 1.0
+  final double size;
+
+  const LeafFillIndicator({required this.fillPercent, this.size = 28});
+
+  @override
+  Widget build(BuildContext context) {
+    final clamped = fillPercent.clamp(0.0, 1.0);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        children: [
+          Icon(Icons.eco, size: size, color: kBorder),
+          ClipRect(
+            clipper: _BottomUpClipper(clamped),
+            child: Icon(Icons.eco, size: size, color: kPrimary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomUpClipper extends CustomClipper<Rect> {
+  final double fillPercent;
+  _BottomUpClipper(this.fillPercent);
+
+  @override
+  Rect getClip(Size size) {
+    final top = size.height * (1 - fillPercent);
+    return Rect.fromLTWH(0, top, size.width, size.height * fillPercent);
+  }
+
+  @override
+  bool shouldReclip(_BottomUpClipper oldClipper) => oldClipper.fillPercent != fillPercent;
+}
+
+const List<Color> actionCardColors = [
+  kPrimary,
+  kTransportBlue,
+  kFlightsGreen,
+  kDietOrange,
+  kSpendingBlue,
+  kPetsPurple,
+  kTripsRed,
+];
+
+// ── Bullet Point List ───────────────────────────────────────────────
+Widget _bulletPoint(String text) {
+  return Padding(
+    padding: EdgeInsets.only(bottom: 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('•  ', style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5)),
+        Expanded(
+          child: Text(text, style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5)),
+        ),
+      ],
+    ),
+  );
+}
+
+// ── Difficulty Gauge Icon ───────────────────────────────────────────────
+class DifficultyGauge extends StatelessWidget {
+  final String difficulty;
+  final double size;
+
+  const DifficultyGauge({required this.difficulty, this.size = 56});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size * 0.42,
+      child: CustomPaint(
+        painter: _GaugePainter(difficulty: difficulty.toLowerCase()),
+      ),
+    );
+  }
+}
+
+class _GaugePainter extends CustomPainter {
+  final String difficulty;
+  _GaugePainter({required this.difficulty});
+
+  static const Color green = kPrimary;
+  static const Color yellow = Color(0xFFE0C33F);
+  static const Color red = Color(0xFFE05B4F);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.width * 0.85);
+    final strokeWidth = size.height * 0.30;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    const totalSegments = 3;
+    final sweepPerSegment = 3.14159 / totalSegments;
+
+    int filledSegments;
+    switch (difficulty) {
+      case 'easy':
+        filledSegments = 1;
+        break;
+      case 'hard':
+        filledSegments = 3;
+        break;
+      default:
+        filledSegments = 2;
+    }
+
+    final segmentColors = [green, yellow, red];
+
+    // Draw all 3 segments: filled in color, unfilled in grey
+    for (int i = 0; i < totalSegments; i++) {
+      paint.color = i < filledSegments ? segmentColors[i] : kBorder;
+      canvas.drawArc(
+        rect,
+        3.14159 + (i * sweepPerSegment),
+        sweepPerSegment,
+        false,
+        paint,
+      );
+    }
+
+    // Needle points to the edge of the filled zone
+    final needleAngle = 3.14159 + (filledSegments * sweepPerSegment) - (sweepPerSegment / 2);
+    final center = Offset(size.width / 2, size.width * 0.85 / 2);
+    final needleLength = (size.width * 0.85 / 2) * 0.8;
+    final needleEnd = Offset(
+      center.dx + needleLength * Math.cos(needleAngle),
+      center.dy + needleLength * Math.sin(needleAngle),
+    );
+    final needlePaint = Paint()
+      ..color = kText
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(center, needleEnd, needlePaint);
+    canvas.drawCircle(center, 3, Paint()..color = kText);
+  }
+
+  @override
+  bool shouldRepaint(_GaugePainter oldDelegate) => oldDelegate.difficulty != difficulty;
+}
+
+// ── Progress Tracker ─────────────────────────────────────────────
+class RouteTracker extends NavigatorObserver {
+  final ProfileStore profileStore;
+  RouteTracker(this.profileStore);
+
+  void _track(Route<dynamic>? route) {
+    final name = route?.settings.name;
+    if (name != null && name != '/' && !name.startsWith('/maintenance') && !name.startsWith('/auth') && !name.startsWith('/login')) {
+      profileStore.lastRoute = name;
+      profileStore.saveLastRouteOnly();
+    }
+  }
+
+  @override
+  void didPush(Route route, Route? previousRoute) => _track(route);
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) => _track(newRoute);
+}
+
 // ── Under Construction Screen ─────────────────────────────────────────────
 class UnderConstructionScreen extends StatelessWidget {
   @override
@@ -1262,77 +1446,6 @@ class UnderConstructionScreen extends StatelessWidget {
   }
 }
 
-// ── Welcome Screen ─────────────────────────────────────────────────────────
-class WelcomeScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                // Logo/icon
-                Image.asset(
-                  'assets/images/leaf_icon.png',
-                  height: 64,
-                ),
-                SizedBox(height: 32),
-
-                // Title
-                Text(
-                  'My Net Zero\nPlanner',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    height: 1.1,
-                  ),
-                ),
-                SizedBox(height: 16),
-
-                // Subtitle
-                Text(
-                  'Calculate your household\'s carbon footprint and get a personalised plan to reach net zero.',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: kTextSubtle,
-                    height: 1.5,
-                  ),
-                ),
-                SizedBox(height: 48),
-
-                // Start button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/auth'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimary,
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Get Started',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),   // ← closes screenWrapper
-      ),     // ← closes SafeArea
-    );       // ← closes Scaffold
-  }
-}
-
 // ── Auth Choice Screen ──────────────────────────────────────────────────────
 class AuthChoiceScreen extends StatefulWidget {
   @override
@@ -1353,7 +1466,9 @@ class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
     if (user != null) {
       final profile = Provider.of<ProfileStore>(context, listen: false);
       await profile.loadFromFirestore();
-      if (mounted) context.go('/info');
+      if (mounted) {
+        context.go(profile.lastRoute ?? '/auth');
+      }
       return;
     }
     setState(() => _checking = false);
@@ -1361,7 +1476,8 @@ class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
 
   Future<void> _continueAsGuest() async {
     await FirebaseAuth.instance.signInAnonymously();
-    context.go('/info');
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    context.go(profile.lastRoute ?? '/energy-intro');
   }
 
   @override
@@ -1374,50 +1490,82 @@ class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: screenWrapper(
-          child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/images/leaf_icon.png', height: 64),
-                SizedBox(height: 32),
-                Text(
-                  'My Net Zero Planner',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 48),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => context.go('/login'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimary,
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
+        child: Stack(
+          children: [
+            screenWrapper(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Image.asset(
+                      'assets/images/leaf_icon.png',
+                      height: 64,
                     ),
-                    child: Text('Log In', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: _continueAsGuest,
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 18),
-                      shape: StadiumBorder(),
+                    SizedBox(height: 32),
+                    Text(
+                      'My Net Zero\nPlanner',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        height: 1.1,
+                      ),
                     ),
-                    child: Text(
-                      'Continue without logging in',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kTextSubtle),
+                    SizedBox(height: 16),
+                    Text(
+                      'Calculate your household\'s carbon footprint and get a personalised plan to reach net zero.',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: kTextSubtle,
+                        height: 1.5,
+                      ),
                     ),
-                  ),
+                    SizedBox(height: 48),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => context.go('/login'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimary,
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text('Log In', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: _continueAsGuest,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          shape: StadiumBorder(),
+                        ),
+                        child: Text(
+                          'Continue without logging in',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kTextSubtle),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: TextButton(
+                onPressed: () => context.go('/info'),
+                child: Text(
+                  'About this app',
+                  style: TextStyle(color: kTextSubtle, fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1427,7 +1575,7 @@ class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
 // ── Login Screen ────────────────────────────────────────────────────────────
 class LoginScreen extends StatefulWidget {
   final String redirectTo;
-  const LoginScreen({this.redirectTo = '/info'});
+  const LoginScreen({this.redirectTo = '/energy-intro'});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -1637,7 +1785,7 @@ class InfoScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/welcome'),
+          onPressed: () => context.go('/auth'),
         ),
         actions: [
           _authBarButton(context),
@@ -1683,39 +1831,34 @@ class InfoScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 20),
                   Text(
-                    'The app has three phases:',
+                    'It takes you through 3 steps:',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 15),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _bulletPoint('Carbon emission calculation'),
+                      _bulletPoint('A short habit quiz'),
+                      _bulletPoint('Emission reduction actions'),
+                    ],
+                  ),
                   Text.rich(
                     TextSpan(
                       style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                       children: [
                         TextSpan(
-                          text: 'Phase 1:',
+                          text: 'Carbon Emission Calculation',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        TextSpan(text: ' Carbon dioxide emissions calculation'),
                       ],
                     ),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'This is to give you an understanding about where your emissions are coming from, and the areas that need the most improvements.',
-                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'You will need previous energy bill information, so have this to hand before you start.',
-                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Try to be as careful as possible as this helps us to give you accurate results and recommendations!',
+                    'This calculates your households personal CO2 emissions. This shows you where your emissions are actually coming from and the areas to improve upon the most.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
@@ -1725,23 +1868,16 @@ class InfoScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                       children: [
                         TextSpan(
-                          text: 'Phase 2:',
+                          text: 'Short Habit Quiz',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        TextSpan(text: ' About you'),
                       ],
                     ),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'This is a quiz designed to understand your habits, house characteristics, and any carbon reduction actions you have already taken to tailor reduction actions to your lifestyle.',
-                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'It is very short and should only take 2-3 minutes.',
+                    'The short habit quiz helps to identify how the reduction actions can best fit around your family and tailors the recommendations for you.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
@@ -1751,29 +1887,16 @@ class InfoScreen extends StatelessWidget {
                       style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                       children: [
                         TextSpan(
-                          text: 'Phase 3:',
+                          text: 'Emission Reduction Actions',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        TextSpan(text: 'Reduction Actions'),
                       ],
                     ),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'This is where you can see steps you can take to reduce your household emissions.',
-                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'There are three tiers: free, cheap and expensive. Within these tiers actions are given to you in order of highest impact.',
-                    style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Don\'t worry, as if you don\'t like an action you can always skip or remove it!',
+                    'This is where you can see steps to reduce your emissions! Each activity shows you how much CO2 you can save, alongside the money you will save each year from doing it! If you don’t like an action simply skip it and move on to the next one.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
@@ -1806,25 +1929,6 @@ class InfoScreen extends StatelessWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 30),
-                  // Start button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => context.go('/energy-intro'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: kPrimary,
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Let\'s go! →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
                   SizedBox(height: 16),
                 ],
               ),
@@ -1846,7 +1950,7 @@ class EnergyIntroScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/info'),
+          onPressed: () => context.go('/auth'),
         ),
         actions: [
           _authBarButton(context),
@@ -2651,6 +2755,7 @@ class _TariffTypeScreenState extends State<TariffTypeScreen> {
   }
 }
 
+const Color kTransportBlue = Color(0xFF5B84A6);
 // ── Transport Section Intro ─────────────────────────────────────────────
 class TransportIntroScreen extends StatelessWidget {
   static const Color kTransportBlue = Color(0xFF5B84A6);
@@ -3026,7 +3131,7 @@ class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
 
     return QuizFrame(
       progress: 0.4375,
-      question: 'What is you average weekly mileage?',
+      question: 'What is your average weekly mileage?',
       answered: _hasValue,
       backRoute: '/car-fuel',
       accentColor: kTransportBlue,
@@ -3813,7 +3918,7 @@ Widget build(BuildContext context) {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Tap the globe to select your recent holiday destination',
+                    'Tap the globe to select your recent holiday destinations',
                     style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
                     textAlign: TextAlign.center,
                   ),
@@ -3824,12 +3929,12 @@ Widget build(BuildContext context) {
             child: Stack(
               children: [
                 Center(
-                  child: GestureDetector(
-                    onPanStart: (_) => _controller.enableAutoRotate = false,
+                  child: Listener(
+                    onPointerDown: (_) => _controller.enableAutoRotate = false,
                     child: Earth3D(
                       controller: _controller,
                       texture: const AssetImage('assets/images/2k_earth-day.jpg'),
-                      initialScale: 3.0,
+                      initialScale: 3,
                     ),
                   ),
                 ),
@@ -4925,7 +5030,7 @@ class _SpendingCategoryScreenState extends State<SpendingCategoryScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
     final currentValue = _getValue(profile, widget.categoryKey);
     if (currentValue > 0) {
-      _controller.text = currentValue.toString();
+      _controller.text = formatMoney(currentValue);
       _hasValue = true;
     }
     _controller.addListener(() {
@@ -4970,7 +5075,14 @@ class _SpendingCategoryScreenState extends State<SpendingCategoryScreen> {
               children: [
                 if (!_hasValue)
                   Text('e.g.', style: TextStyle(fontSize: 20, color: kText)),
-                Text('£', style: TextStyle(fontSize: 20, fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal, color: kText)),
+                Text(
+                  '£',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
                 Expanded(
                   child: TextField(
                     controller: _controller,
@@ -4980,7 +5092,7 @@ class _SpendingCategoryScreenState extends State<SpendingCategoryScreen> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
                       hintText: '20',
-                      hintStyle: TextStyle(fontSize: 20, color: kText),
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -5087,7 +5199,7 @@ class SpendingHubScreen extends StatelessWidget {
                               ),
                               if (hasAnswer) ...[
                                 SizedBox(height: 2),
-                                Text('£${value.toStringAsFixed(0)}', style: TextStyle(fontSize: 10, color: kSpendingBlue, fontWeight: FontWeight.bold)),
+                                Text('£${formatMoney(value)}', style: TextStyle(fontSize: 10, color: kSpendingBlue, fontWeight: FontWeight.bold)),
                               ],
                             ],
                           ),
@@ -5291,10 +5403,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 ],
               ),
             ),
-            Positioned(
-              top: -23,
-              right: -20,
-              child: ComparisonBadge(stats: _getComparisonStats(total, treeAmount)),
+            Builder(
+              builder: (context) {
+                final isMobile = MediaQuery.of(context).size.width < 480;
+                return Positioned(
+                  top: isMobile ? 8 : -23,
+                  right: isMobile ? -10 : -20,
+                  child: ComparisonBadge(stats: _getComparisonStats(total, treeAmount)),
+                );
+              },
             ),
           ],
         ),
@@ -5340,7 +5457,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton(
-            onPressed: () => context.go('/welcome'),
+            onPressed: () => context.go('/auth'),
             style: OutlinedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 18),
               side: BorderSide(color: kPrimary),
@@ -5720,7 +5837,7 @@ class _PropertyTypeScreenState extends State<PropertyTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.0769,
+      progress: 0.0833,
       question: 'What type of property do you live in?',
       answered: _selected != null,
       backRoute: '/energyaction',
@@ -5769,7 +5886,7 @@ class _WallTypeScreenState extends State<WallTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.1538,
+      progress: 0.1666,
       question: 'What type of walls does your property have?',
       answered: _selected != null,
       backRoute: '/property-type',
@@ -5814,7 +5931,7 @@ class _BoilerAgeScreenState extends State<BoilerAgeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.2307,
+      progress: 0.2499,
       question: 'How old is your boiler?',
       answered: _selected != null,
       backRoute: '/wall-type',
@@ -5965,7 +6082,7 @@ class _LightbulbsScreenState extends State<LightbulbsScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.3076,
+      progress: 0.3332,
       question: 'How many of each type of bulb do you have?',
       answered: true,
       backRoute: '/boiler-age',
@@ -6047,7 +6164,7 @@ class _ShowerTypeScreenState extends State<ShowerTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.3845,
+      progress: 0.4165,
       question: 'What type of shower do you have?',
       answered: _selected != null,
       backRoute: '/lightbulbs',
@@ -6071,14 +6188,102 @@ class _ShowerTypeScreenState extends State<ShowerTypeScreen> {
   }
 }
 
-// ── Insulation Screen ───────────────────────────────────────────────────
-class InsulationScreen extends StatefulWidget {
+// ── Loft Insulation Thickness Question ──────────────────────────────────
+class InsulationThicknessScreen extends StatefulWidget {
   @override
-  _InsulationScreenState createState() => _InsulationScreenState();
+  _InsulationThicknessScreenState createState() => _InsulationThicknessScreenState();
 }
 
-class _InsulationScreenState extends State<InsulationScreen> {
-  String _insulationThickness = '0mm';
+class _InsulationThicknessScreenState extends State<InsulationThicknessScreen> {
+  String? _selected;
+
+  final List<String> _thicknessValues = ['0mm', '100mm', '270mm'];
+  final List<String> _thicknessLabels = ['None', 'Some (~100mm)', 'Well insulated (270mm)'];
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.insulationThicknessAnswered ? profile.insulationThickness : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final currentIndex = _selected != null ? _thicknessValues.indexOf(_selected!) : 1;
+
+    return QuizFrame(
+      progress: 0.4998,
+      question: 'How thick is your loft insulation?',
+      answered: _selected != null,
+      backRoute: '/shower-type',
+      onNext: () {
+        profile.insulationThickness = _selected!;
+        profile.insulationThicknessAnswered = true;
+        profile.update();
+        context.go('/insulation-types');
+      },
+      answerContent: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _thicknessLabels.map((label) {
+              final index = _thicknessLabels.indexOf(label);
+              return Expanded(
+                child: Text(
+                  label,
+                  textAlign: index == 0
+                      ? TextAlign.left
+                      : index == _thicknessLabels.length - 1
+                          ? TextAlign.right
+                          : TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: currentIndex == index ? kPrimary : kTextSubtle,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          SliderTheme(
+            data: SliderThemeData(
+              trackHeight: 10,
+              thumbShape: RoundSliderThumbShape(enabledThumbRadius: 12),
+            ),
+            child: Slider(
+              value: currentIndex.toDouble(),
+              min: 0,
+              max: 2,
+              divisions: 2,
+              activeColor: kPrimary,
+              label: _thicknessLabels[currentIndex],
+              onChanged: (value) {
+                setState(() => _selected = _thicknessValues[value.round()]);
+              },
+            ),
+          ),
+          if (_selected == null) ...[
+            SizedBox(height: 4),
+            Text(
+              'Move the slider to answer',
+              style: TextStyle(color: kTextSubtle, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Insulation Types Screen ────────────────────────────────────────────────
+class InsulationTypesScreen extends StatefulWidget {
+  @override
+  _InsulationTypesScreenState createState() => _InsulationTypesScreenState();
+}
+
+class _InsulationTypesScreenState extends State<InsulationTypesScreen> {
   bool _windowDP = false;
   bool _doorDP = false;
   bool _cylinderJacket = false;
@@ -6090,7 +6295,6 @@ class _InsulationScreenState extends State<InsulationScreen> {
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _insulationThickness = profile.insulationThickness;
     _windowDP = profile.windowDP;
     _doorDP = profile.doorDP;
     _cylinderJacket = profile.cylinderJacket;
@@ -6101,401 +6305,402 @@ class _InsulationScreenState extends State<InsulationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
+    final profile = Provider.of<ProfileStore>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/homeinfo'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 0),
-                  Text(
-                    'Insulation',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-                  progressBar(0.5),
-                  SizedBox(height: 24),
-
-                  Text(
-                    'Your insulation situation',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-
-                  // Loft insulation thickness
-                  Text('Loft insulation thickness',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _insulationThickness,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: '0mm', child: Text('None / no insulation')),
-                      DropdownMenuItem(value: '100mm', child: Text('Some insulation (around 100mm)')),
-                      DropdownMenuItem(value: '270mm', child: Text('Well insulated (270mm, current standard)')),
-                    ],
-                    onChanged: (value) => setState(() => _insulationThickness = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  Text('Which of these do you already have?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-
-                  CheckboxListTile(
-                    value: _windowDP,
-                    onChanged: (value) => setState(() => _windowDP = value!),
-                    title: Text('Window draught-proofing', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _doorDP,
-                    onChanged: (value) => setState(() => _doorDP = value!),
-                    title: Text('Door draught-proofing', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _cylinderJacket,
-                    onChanged: (value) => setState(() => _cylinderJacket = value!),
-                    title: Text('Water cylinder jacket', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _radiatorPanels,
-                    onChanged: (value) => setState(() => _radiatorPanels = value!),
-                    title: Text('Reflective radiator panels', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _wallInsulation,
-                    onChanged: (value) => setState(() => _wallInsulation = value!),
-                    title: Text('Wall insulation', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  CheckboxListTile(
-                    value: _floorInsulation,
-                    onChanged: (value) => setState(() => _floorInsulation = value!),
-                    title: Text('Floor insulation', style: TextStyle(color: kText)),
-                    activeColor: kPrimary,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-
-                  SizedBox(height: 32),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        profile.insulationThickness = _insulationThickness;
-                        profile.windowDP = _windowDP;
-                        profile.doorDP = _doorDP;
-                        profile.cylinderJacket = _cylinderJacket;
-                        profile.radiatorPanels = _radiatorPanels;
-                        profile.wallInsulation = _wallInsulation;
-                        profile.floorInsulation = _floorInsulation;
-                        profile.update();
-                        context.go('/habit');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return QuizFrame(
+      progress: 0.5831,
+      question: 'Which of these do you already have?',
+      subheading: 'This stops us recommending things you\'ve already done.',
+      answered: true,
+      backRoute: '/insulation-thickness',
+      onNext: () {
+        profile.windowDP = _windowDP;
+        profile.doorDP = _doorDP;
+        profile.cylinderJacket = _cylinderJacket;
+        profile.radiatorPanels = _radiatorPanels;
+        profile.wallInsulation = _wallInsulation;
+        profile.floorInsulation = _floorInsulation;
+        profile.update();
+        context.go('/shower-time');
+      },
+      answerContent: Column(
+        children: [
+          CheckboxListTile(
+            value: _windowDP,
+            onChanged: (value) => setState(() => _windowDP = value!),
+            title: Text('Window draught-proofing', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
           ),
-        ),
+          CheckboxListTile(
+            value: _doorDP,
+            onChanged: (value) => setState(() => _doorDP = value!),
+            title: Text('Door draught-proofing', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _cylinderJacket,
+            onChanged: (value) => setState(() => _cylinderJacket = value!),
+            title: Text('Water cylinder jacket', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _radiatorPanels,
+            onChanged: (value) => setState(() => _radiatorPanels = value!),
+            title: Text('Reflective radiator panels', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _wallInsulation,
+            onChanged: (value) => setState(() => _wallInsulation = value!),
+            title: Text('Wall insulation', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+          CheckboxListTile(
+            value: _floorInsulation,
+            onChanged: (value) => setState(() => _floorInsulation = value!),
+            title: Text('Floor insulation', style: TextStyle(color: kText)),
+            activeColor: kPrimary,
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Habit Screen ────────────────────────────────────────────────────────
-class HabitScreen extends StatefulWidget {
+// ── Shower Time Question ────────────────────────────────────────────────
+class ShowerTimeScreen extends StatefulWidget {
   @override
-  _HabitScreenState createState() => _HabitScreenState();
+  _ShowerTimeScreenState createState() => _ShowerTimeScreenState();
 }
 
-class _HabitScreenState extends State<HabitScreen> {
-  final _showerTimeController = TextEditingController(text: '5');
-  String _radiatorBleeding = 'this_year';
-  final _washingController = TextEditingController(text: '1');
-  String _washingTemp = '40';
+class _ShowerTimeScreenState extends State<ShowerTimeScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
 
   @override
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _showerTimeController.text = profile.showerTime > 0 ? profile.showerTime.toString() : '5';
-    _radiatorBleeding = profile.radiatorBleeding;
-    _washingController.text = profile.washingFrequency > 0 ? profile.washingFrequency.toString() : '1';
-    _washingTemp = profile.washingTemperature;
+    if (profile.showerTime > 0) {
+      _controller.text = profile.showerTime.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
+    final profile = Provider.of<ProfileStore>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/insulation'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: 0),
-                  Text(
-                    'Habits',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-                  progressBar(0.75),
-                  SizedBox(height: 24),
-
-                  Text(
-                    'A few quick habits',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 32),
-
-                  Text('Average total minutes spent in the shower per person, per day',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _showerTimeController,
+    return QuizFrame(
+      progress: 0.6664,
+      question: 'Average minutes spent in the shower, per person, per day?',
+      answered: _hasValue,
+      backRoute: '/insulation-types',
+      onNext: () {
+        profile.showerTime = int.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/radiator-bleeding');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text('e.g.', style: TextStyle(fontSize: 20, color: kText)),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     decoration: InputDecoration(
-                      hintText: 'e.g. 7',
-                      suffixText: 'minutes',
+                      hintText: '7',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                  SizedBox(height: 24),
-
-                  Text('When did you last bleed your radiators?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _radiatorBleeding,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'never', child: Text('Never')),
-                      DropdownMenuItem(value: 'over_a_year_ago', child: Text('More than a year ago')),
-                      DropdownMenuItem(value: 'this_year', child: Text('Within the last year')),
-                    ],
-                    onChanged: (value) => setState(() => _radiatorBleeding = value!),
+                ),
+                Text(
+                  (int.tryParse(_controller.text) ?? 0) == 1 ? 'minute' : 'minutes',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
                   ),
-                  SizedBox(height: 24),
-
-                  Text('How many times a week do you use your washing machine?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: _washingController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: InputDecoration(hintText: 'e.g. 2'),
-                  ),
-
-                  SizedBox(height: 24),
-
-                  Text('What temperature do you do your washing at?',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _washingTemp,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: '30', child: Text('30°')),
-                      DropdownMenuItem(value: '40', child: Text('40°')),
-                      DropdownMenuItem(value: '60', child: Text('60°')),
-                    ],
-                    onChanged: (value) => setState(() => _washingTemp = value!),
-                  ),
-                  SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        profile.showerTime = int.tryParse(_showerTimeController.text) ?? 0;
-                        profile.radiatorBleeding = _radiatorBleeding;
-                        profile.washingFrequency = int.tryParse(_washingController.text) ?? 0;
-                        profile.washingTemperature = _washingTemp;
-                        profile.update();
-                        context.go('/homeowner');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'Next →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-// ── Homeowner Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Radiator Bleeding Question ───────────────────────────────────────────────
+class RadiatorBleedingScreen extends StatefulWidget {
+  @override
+  _RadiatorBleedingScreenState createState() => _RadiatorBleedingScreenState();
+}
 
+class _RadiatorBleedingScreenState extends State<RadiatorBleedingScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.radiatorBleedingAnswered ? profile.radiatorBleeding : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.7497,
+      question: 'When did you last bleed your radiators?',
+      answered: _selected != null,
+      backRoute: '/shower-time',
+      onNext: () {
+        profile.radiatorBleeding = _selected!;
+        profile.radiatorBleedingAnswered = true;
+        profile.update();
+        context.go('/washing-amount');
+      },
+      answerContent: buildSingleSelectOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        options: [
+          {
+            'value': 'never',
+            'label': 'Never!',
+            'icon': Icons.cancel,
+          },
+          {
+            'value': 'over_a_year_ago',
+            'label': 'Over a year ago',
+            'icon': Icons.calendar_today,
+          },
+          {
+            'value': 'this_year',
+            'label': 'This year',
+            'icon': Icons.check_circle,
+          },
+        ],
+      ),
+    );
+  }
+}
+
+// ── Washing Amount Question ────────────────────────────────────────────────
+class WashingAmountScreen extends StatefulWidget {
+  @override
+  _WashingAmountScreenState createState() => _WashingAmountScreenState();
+}
+
+class _WashingAmountScreenState extends State<WashingAmountScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.washingFrequency > 0) {
+      _controller.text = profile.washingFrequency.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.833,
+      question: 'How many loads of washing do you do per week?',
+      answered: _hasValue,
+      backRoute: '/radiator-bleeding',
+      onNext: () {
+        profile.washingFrequency = int.tryParse(_controller.text) ?? 0;
+        profile.update();
+        context.go('/washing-temperature');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text('e.g.', style: TextStyle(fontSize: 20, color: kText)),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '2',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  (int.tryParse(_controller.text) ?? 0) == 1 ? 'load' : 'loads',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Washing Temperature Question ───────────────────────────────────────────────
+class WashingTemperatureScreen extends StatefulWidget {
+  @override
+  _WashingTemperatureScreenState createState() => _WashingTemperatureScreenState();
+}
+
+class _WashingTemperatureScreenState extends State<WashingTemperatureScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.washingTemperatureAnswered ? profile.washingTemperature : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.9163,
+      question: 'What temperature do you do your washing at?',
+      answered: _selected != null,
+      backRoute: '/washing-amount',
+      onNext: () {
+        profile.washingTemperature = _selected!;
+        profile.washingTemperatureAnswered = true;
+        profile.update();
+        context.go('/homeowner');
+      },
+      answerContent: buildSingleSelectOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        options: [
+          {
+            'value': '30',
+            'label': '30°',
+            'image': 'assets/images/30.png'
+          },
+          {
+            'value': '40',
+            'label': '40°',
+            'image': 'assets/images/40.png'
+          },
+          {
+            'value': '60',
+            'label': '60°',
+            'image': 'assets/images/60.png'
+          },
+        ],
+      ),
+    );
+  }
+}
+
+
+// ── Homeowner Question ────────────────────────────────────────────────────
 class HomeownerScreen extends StatefulWidget {
   @override
   _HomeownerScreenState createState() => _HomeownerScreenState();
 }
 
 class _HomeownerScreenState extends State<HomeownerScreen> {
-  String _homeowner = 'homeowner';
+  bool? _selected;
 
   @override
   void initState() {
     super.initState();
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    _homeowner = profile.homeowner;
+    _selected = profile.homeownerAnswered ? (profile.homeowner == 'homeowner') : null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final profile = Provider.of<ProfileStore>(context);
+    final profile = Provider.of<ProfileStore>(context, listen: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/habit'),
-        ),
-        actions: [
-          _authBarButton(context),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-
-                  SizedBox(height: 0),
-
-                  Text(
-                    'Final Question',
-                    style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 12),
-
-                  progressBar(1.0),
-                  SizedBox(height: 24),
-
-                  // Fuel type dropdown
-                  Text('Are you a...',
-                      style: TextStyle(fontWeight: FontWeight.w600, color: kText)),
-                  SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _homeowner,
-                    decoration: InputDecoration(),
-                    items: [
-                      DropdownMenuItem(value: 'homeowner', child: Text('Home Owner?')),
-                      DropdownMenuItem(value: 'renter', child: Text('Renter?')),
-                    ],
-                    onChanged: (value) => setState(() => _homeowner = value!),
-                  ),
-
-                  SizedBox(height: 32),
-
-                  // Next button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        profile.homeowner = _homeowner;
-                        context.go('/phase3');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        shape: StadiumBorder(),
-                      ),
-                      child: Text(
-                        'See My Recommendations →',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return QuizFrame(
+      progress: 1.0,
+      question: 'Are you a homeowner or a renter?',
+      answered: _selected != null,
+      backRoute: '/washing-temperature',
+      nextLabel: 'See My Recommendations →',
+      onNext: () {
+        profile.homeowner = _selected! ? 'homeowner' : 'renter';
+        profile.homeownerAnswered = true;
+        profile.update();
+        context.go('/actions');
+      },
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        leftLabel: 'Homeowner',
+        leftIcon: Icons.home,
+        rightLabel: 'Renter',
+        rightIcon: Icons.key,
       ),
     );
   }
@@ -6516,6 +6721,7 @@ class _ActionScreenState extends State<ActionScreen> {
   Map<String, dynamic>? _actions; //at the beginning I haven't called anything from the backend so actions is null. Later, I will call something so it won't be null anymore. Also there is no map so the map fuction is null.
   List<Map<String, dynamic>> _queue = [];
   List<String> _skippedNames = [];
+  String? _originalFirstActionName;
 
   @override
   void initState() { //initState() is darts standard screen builder. I am saying void this and have my code there in place
@@ -6537,9 +6743,12 @@ class _ActionScreenState extends State<ActionScreen> {
       );
       if (response.statusCode == 200) {
         setState(() {
-          _actions = jsonDecode(response.body); // if it works, change actions to match the response
+          _actions = jsonDecode(response.body);
           _loading = false;
           _queue = List<Map<String, dynamic>>.from(_actions!['recommendations']);
+          if (_originalFirstActionName == null && _queue.isNotEmpty) {
+            _originalFirstActionName = _queue.first['name'] as String;
+          }
           for (final name in _skippedNames) {
             _moveToBackOfTier(name);
           }
@@ -6656,11 +6865,32 @@ class _ActionScreenState extends State<ActionScreen> {
     final totalSaved = (_actions!['total_saved_kg_co2e'] as num).toDouble();
     final card = _queue.first;
     final label = card['label'] as String;
-    final cost = card['cost'] as String;
     final savings = (card['savings'] as num).toDouble();
     final savingsNote = card['savings_note'] as String?;
     final difficulty = card['difficulty'] as String;
     final reduction = (card['reduction_kg_co2e'] as num).toDouble();
+
+    final allActions = List<Map<String, dynamic>>.from(_actions!['recommendations']);
+    final maxReduction = allActions.isEmpty
+        ? 1.0
+        : allActions.map((a) => (a['reduction_kg_co2e'] as num).toDouble()).reduce((a, b) => a > b ? a : b);
+    final fillPercent = maxReduction > 0 ? reduction / maxReduction : 0.0;
+
+    final cardColor = _queue.first['name'] == card['name']
+      ? kPrimary
+      : actionCardColors[card['name'].hashCode.abs() % actionCardColors.length];
+
+    Color difficultyColor;
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        difficultyColor = kPrimary;
+        break;
+      case 'medium':
+        difficultyColor = kDietOrange;
+        break;
+      default:
+        difficultyColor = kTripsRed;
+    }
 
     return Column(
       children: [
@@ -6705,31 +6935,77 @@ class _ActionScreenState extends State<ActionScreen> {
         SizedBox(height: 24),
         Container(
           width: double.infinity,
-          padding: EdgeInsets.all(24),
+          padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: kSurface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: kBorder),
+            border: Border.all(color: cardColor, width: 2),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('MONEY SAVED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: kTextSubtle)),
+                      SizedBox(height: 2),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cardColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '£${savings.toStringAsFixed(0)}/yr',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: cardColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Spacer(),
+                ],
+              ),
+              SizedBox(height: 16),
               Text(
                 label,
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kText),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 16),
-              Text(
-                '${reduction.toStringAsFixed(0)} kg CO₂e saved per year',
-                style: TextStyle(fontSize: 16, color: kTextSubtle),
-                textAlign: TextAlign.center,
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Column(
+                    children: [
+                      LeafFillIndicator(fillPercent: fillPercent),
+                      SizedBox(height: 4),
+                      Text('CO₂ SCORE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: kTextSubtle)),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      Text(
+                        '${reduction.toStringAsFixed(0)}',
+                        style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: cardColor),
+                      ),
+                      Text('kg CO₂e/yr', style: TextStyle(fontSize: 11, color: kTextSubtle)),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      DifficultyGauge(difficulty: difficulty),
+                      SizedBox(height: 4),
+                      Text('EFFORT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: kTextSubtle)),
+                    ],
+                  ),
+                ],
               ),
-              SizedBox(height: 12),
-                Text(
-                  savingsNote ?? 'Saves you £${savings.toStringAsFixed(2)}/year  •   Difficulty: $difficulty',
-                  style: TextStyle(fontSize: 13, color: kTextSubtle),
-                ),
+              SizedBox(height: 16),
+              if (savingsNote != null)
+                Text(savingsNote, style: TextStyle(fontSize: 13, color: kTextSubtle), textAlign: TextAlign.center),
               SizedBox(height: 20),
               Row(
                 children: [
@@ -6741,10 +7017,7 @@ class _ActionScreenState extends State<ActionScreen> {
                         side: BorderSide(color: kBorder),
                         shape: StadiumBorder(),
                       ),
-                      child: Text(
-                        'Skip →',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: kTextSubtle),
-                      ),
+                      child: Text('Skip →', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: kTextSubtle)),
                     ),
                   ),
                   SizedBox(width: 12),
@@ -6752,14 +7025,11 @@ class _ActionScreenState extends State<ActionScreen> {
                     child: ElevatedButton(
                       onPressed: _markDone,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kPrimary,
+                        backgroundColor: cardColor,
                         padding: EdgeInsets.symmetric(vertical: 16),
                         shape: StadiumBorder(),
                       ),
-                      child: Text(
-                        'Done ✓',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
+                      child: Text('Done ✓', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                     ),
                   ),
                 ],
@@ -6768,10 +7038,7 @@ class _ActionScreenState extends State<ActionScreen> {
               Center(
                 child: TextButton(
                   onPressed: _dismiss,
-                  child: Text(
-                    'Not interested — don\'t show this again',
-                    style: TextStyle(color: kTextSubtle, fontSize: 13),
-                  ),
+                  child: Text('Not interested — don\'t show this again', style: TextStyle(color: kTextSubtle, fontSize: 13)),
                 ),
               ),
             ],

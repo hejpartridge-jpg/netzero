@@ -94,6 +94,9 @@ flutter:
     - assets/images/incandescent.png
     - assets/images/cfl.png
     - assets/images/led.png
+    - assets/images/30.png
+    - assets/images/40.png
+    - assets/images/60.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

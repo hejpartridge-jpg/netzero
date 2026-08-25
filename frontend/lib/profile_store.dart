@@ -100,6 +100,7 @@ class ProfileStore extends ChangeNotifier {
   
   // ── Insulation Questions ───────────────────────────────────────────
   String insulationThickness = '0mm';
+  bool insulationThicknessAnswered = false;
   bool windowDP = false;
   bool doorDP = false;
   bool cylinderJacket = false;
@@ -108,17 +109,21 @@ class ProfileStore extends ChangeNotifier {
   bool floorInsulation = false;
 
   // ── Habit Questions ──────────────────────────────────────────────────────────
-  int showerTime = 5;
+  int showerTime = 0;
   String radiatorBleeding = 'this_year';
-  int washingFrequency = 1;
+  bool radiatorBleedingAnswered = false;
+  int washingFrequency = 0;
   String washingTemperature = '40';
+  bool washingTemperatureAnswered = false;
 
   // ── Habit Questions ──────────────────────────────────────────────────────────
   String homeowner = 'homeowner';
+  bool homeownerAnswered = false;
 
   // ── Action Tracking ─────────────────────────────────────────────────────────
   List<String> completedActions = [];
   List<Map<String, dynamic>> dismissedActions = [];
+  String? lastRoute;
 
   // ── Convert to API profile dict ────────────────────────
   Map<String, dynamic> toProfile() {
@@ -204,6 +209,10 @@ class ProfileStore extends ChangeNotifier {
       'wall_type_answered': wallTypeAnswered,
       'boiler_answered': boilerAnswered,
       'shower_type_answered': showerTypeAnswered,
+      'radiator_bleeding_answered': radiatorBleedingAnswered,
+      'washing_temperature_answered': washingTemperatureAnswered,
+      'homeowner_answered': homeownerAnswered,
+      'last_route': lastRoute,
     };
   }
 
@@ -298,9 +307,13 @@ class ProfileStore extends ChangeNotifier {
     floorInsulation = _b(data['floor_insulation'], floorInsulation);
     showerTime = _i(data['shower_time'], showerTime);
     radiatorBleeding = _s(data['last_radiator_bleed'], radiatorBleeding);
+    radiatorBleedingAnswered = data['radiator_bleeding_answered'] as bool? ?? radiatorBleedingAnswered;
     washingFrequency = _i(data['uses_per_week'], washingFrequency);
     washingTemperature = _s(data['washing_temperature'], washingTemperature);
+    washingTemperatureAnswered = data['washing_temperature_answered'] as bool? ?? washingTemperatureAnswered;
     homeowner = _s(data['homeowner'], homeowner);
+    homeownerAnswered = data['homeowner_answered'] as bool? ?? homeownerAnswered;
+    lastRoute = data['last_route'] as String? ?? lastRoute;
 
     if (data['completed_actions'] != null) {
       completedActions = List<String>.from(data['completed_actions']);
@@ -324,6 +337,19 @@ class ProfileStore extends ChangeNotifier {
           .set(_toFirestoreData());
     } catch (e) {
       print('Failed to save progress: $e');
+    }
+  }
+
+  Future<void> saveLastRouteOnly() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {'last_route': lastRoute},
+        SetOptions(merge: true),
+      );
+    } catch (e) {
+      // silently ignore
     }
   }
 
