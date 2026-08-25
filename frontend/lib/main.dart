@@ -1798,7 +1798,7 @@ class InfoScreen extends StatelessWidget {
             child: Padding( // applies padding round the outside so its not all cramped up on the sides
               padding: EdgeInsets.all(24.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
                     height: 60,
@@ -1809,7 +1809,7 @@ class InfoScreen extends StatelessWidget {
                           child: Text(
                             'About This App',
                             style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: kText),
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.left,
                           ),
                         ),
                         Positioned(
@@ -1827,13 +1827,13 @@ class InfoScreen extends StatelessWidget {
                   Text(
                     'My Net Zero Planner helps you to understand where your carbon emissions are coming from and how to reduce them.',
                     style: TextStyle(fontSize: 18, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 20),
                   Text(
                     'It takes you through 3 steps:',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 15),
                   Column(
@@ -1854,13 +1854,13 @@ class InfoScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 8),
                   Text(
                     'This calculates your households personal CO2 emissions. This shows you where your emissions are actually coming from and the areas to improve upon the most.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 30),
                   Text.rich(
@@ -1873,13 +1873,13 @@ class InfoScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 8),
                   Text(
                     'The short habit quiz helps to identify how the reduction actions can best fit around your family and tailors the recommendations for you.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 30),
                   Text.rich(
@@ -1892,13 +1892,13 @@ class InfoScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 8),
                   Text(
                     'This is where you can see steps to reduce your emissions! Each activity shows you how much CO2 you can save, alongside the money you will save each year from doing it! If you don’t like an action simply skip it and move on to the next one.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 30),
                   Text.rich(
@@ -1913,7 +1913,7 @@ class InfoScreen extends StatelessWidget {
                         TextSpan(text: ' to give up habits, activities or things you love. It should be integrated seamlessly into everyone\'s lives.'),
                       ],
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   Text.rich(
                     TextSpan(
@@ -1927,7 +1927,7 @@ class InfoScreen extends StatelessWidget {
                         TextSpan(text: ' actions to help make the world a better place for everyone!'),
                       ],
                     ),
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.left,
                   ),
                   SizedBox(height: 16),
                 ],
