@@ -67,7 +67,6 @@ flutter:
   assets:
     - assets/images/leaf_icon.png
     - assets/images/bolt_icon.png
-    - assets/images/energy_background.png
     - assets/images/car_mini.png
     - assets/images/car_supermini.png
     - assets/images/car_lower_medium.png
@@ -97,6 +96,16 @@ flutter:
     - assets/images/30.png
     - assets/images/40.png
     - assets/images/60.png
+    - assets/images/energy_cover_background.png
+    - assets/images/energy_cover_background1.png
+    - assets/images/transport_cover_background.png
+    - assets/images/flight_cover_background.png
+    - assets/images/uk_cover_background.png
+    - assets/images/pets_cover_background.png
+    - assets/images/diet_cover_background.png
+    - assets/images/spending_cover_background.png
+
+    
 
   # To add assets to your application, add an assets section, like this:
   # assets:

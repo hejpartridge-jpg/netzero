@@ -120,10 +120,15 @@ class ProfileStore extends ChangeNotifier {
   String homeowner = 'homeowner';
   bool homeownerAnswered = false;
 
-  // ── Action Tracking ─────────────────────────────────────────────────────────
+  // ── Action Tracking And Other ─────────────────────────────────────────────────────────
   List<String> completedActions = [];
   List<Map<String, dynamic>> dismissedActions = [];
   String? lastRoute;
+  String avatarKey = 'default';
+  bool phase1Complete = false;
+  bool returningFromEdit = false;
+  String? firstActionEverSeen;
+  List<Map<String, dynamic>> completedActionsData = [];
 
   // ── Convert to API profile dict ────────────────────────
   Map<String, dynamic> toProfile() {
@@ -213,6 +218,10 @@ class ProfileStore extends ChangeNotifier {
       'washing_temperature_answered': washingTemperatureAnswered,
       'homeowner_answered': homeownerAnswered,
       'last_route': lastRoute,
+      'avatar_key': avatarKey,
+      'phase1': phase1Complete,
+      'first_action_ever_seen': firstActionEverSeen,
+      'completed_actions_data': completedActionsData,
     };
   }
 
@@ -314,6 +323,14 @@ class ProfileStore extends ChangeNotifier {
     homeowner = _s(data['homeowner'], homeowner);
     homeownerAnswered = data['homeowner_answered'] as bool? ?? homeownerAnswered;
     lastRoute = data['last_route'] as String? ?? lastRoute;
+    avatarKey = data['avatar_key'] as String? ?? avatarKey;
+    phase1Complete = data['phase1'] as bool? ?? phase1Complete;
+    firstActionEverSeen = data['first_action_ever_seen'] as String? ?? firstActionEverSeen;
+
+    if (data['completed_actions_data'] != null) {
+      completedActionsData = List<Map<String, dynamic>>.from(
+          (data['completed_actions_data'] as List).map((e) => Map<String, dynamic>.from(e)));
+    }
 
     if (data['completed_actions'] != null) {
       completedActions = List<String>.from(data['completed_actions']);

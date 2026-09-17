@@ -27,18 +27,32 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ProfileStore(),
+    ChangeNotifierProvider.value(
+      value: profileStore,
       child: NetZeroApp(),
     ),
   );
 }
 
 // ── Router ──────────────────────────────────────────────
+final ProfileStore profileStore = ProfileStore();
 final _router = GoRouter(
   initialLocation: '/auth',
   observers: [Earth3D.routeObserver],
   redirect: (context, state) {
+    final location = state.matchedLocation;
+    if (location.isNotEmpty &&
+      location != '/' &&
+      !location.startsWith('/maintenance') &&
+      !location.startsWith('/auth') &&
+      !location.startsWith('/login') &&
+      !location.startsWith('/dashboard') &&
+      !location.startsWith('/answers') &&
+      !location.startsWith('/info')) {
+    profileStore.lastRoute = location;
+    profileStore.saveLastRouteOnly();
+  }
+
     final bypassKey = state.uri.queryParameters['preview'];
     final isDeveloper = bypassKey == 'letmein123';
 
@@ -53,10 +67,13 @@ final _router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) {
-        final redirectTo = state.uri.queryParameters['redirect'] ?? '/energy-intro';
+        final redirectTo = state.uri.queryParameters['redirect'] ?? '/dashboard';
         return LoginScreen(redirectTo: redirectTo);
       },
-    ),    
+    ), 
+    GoRoute(path: '/dashboard', builder: (context, state) => DashboardScreen()),   
+    GoRoute(path: '/answers', builder: (context, state) => AnswersScreen()),
+    GoRoute(path: '/info-from-dashboard', builder: (context, state) => InfoScreen(returnRoute: '/dashboard')),
     GoRoute(path: '/info',         builder: (context, state) => InfoScreen()),
     GoRoute(path: '/energy-intro', builder: (context, state) => EnergyIntroScreen()),
     GoRoute(path: '/num-people', builder: (context, state) => NumPeopleScreen()),
@@ -112,6 +129,8 @@ final _router = GoRouter(
     GoRoute(path: '/washing-temperature', builder: (context, state) => WashingTemperatureScreen()),
     GoRoute(path: '/homeowner',    builder: (context, state) => HomeownerScreen()),
     GoRoute(path: '/actions',      builder: (context, state) => ActionScreen()),
+    GoRoute(path: '/completed-tasks', builder: (context, state) => CompletedTasksScreen()),
+    GoRoute(path: '/placeholder', builder: (context, state) => PlaceholderScreen()),
   ],
 ); 
 
@@ -130,12 +149,7 @@ class NetZeroApp extends StatelessWidget {
       builder: (context, child) {
         return Container(
           color: kBackground,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 480),
-              child: child,
-            ),
-          ),
+          child: child,
         );
       },
     );
@@ -166,18 +180,37 @@ Widget _placeholder(String title, String next, BuildContext context) {
 }
 
 // ── Login/Logout Bar ───────────────────────────
-Widget _authBarButton(BuildContext context, {Color accentColor = kPrimary}) {
+Widget _authBarButton(BuildContext context, {Color accentColor = kPrimary, bool hideMyProfile = false}) {
   final user = FirebaseAuth.instance.currentUser;
   final isLoggedIn = user != null && !user.isAnonymous;
 
   if (isLoggedIn) {
-    return TextButton(
-      onPressed: () async {
-        await FirebaseAuth.instance.signOut();
-        if (context.mounted) context.go('/auth');
-      },
-      child: Text('Log out', style: TextStyle(color: kTextSubtle)),
-    );
+  return Consumer<ProfileStore>(
+    builder: (context, profile, child) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => showAvatarPicker(context, profile),
+            child: buildAvatarIcon(profile),
+          ),
+        SizedBox(width: 8),
+        if (!hideMyProfile)
+          TextButton(
+            onPressed: () => context.go('/dashboard'),
+            child: Text('My Profile', style: TextStyle(color: accentColor, fontWeight: FontWeight.bold)),
+          ),
+        TextButton(
+          onPressed: () async {
+            await FirebaseAuth.instance.signOut();
+            if (context.mounted) context.go('/auth');
+          },
+          child: Text('Log out', style: TextStyle(color: kTextSubtle)),
+        ),
+        ],
+      );
+    },
+  );
   } else {
     return TextButton(
       onPressed: () => context.go('/login'),
@@ -856,6 +889,130 @@ class _QuizFrameState extends State<QuizFrame> {
   }
 }
 
+const Map<String, Map<String, dynamic>> avatarOptions = {
+  'default': {'icon': Icons.person, 'color': Colors.grey},
+  'leaf': {'icon': Icons.eco, 'color': kPrimary},
+  'blue': {'icon': Icons.water_drop, 'color': kTransportBlue},
+  'orange': {'icon': Icons.local_fire_department, 'color': kDietOrange},
+  'purple': {'icon': Icons.pets, 'color': kPetsPurple},
+  'red': {'icon': Icons.flight, 'color': kTripsRed},
+};
+
+// ── Profile Widgets ───────────────────────────
+void showAvatarPicker(BuildContext context, ProfileStore profile) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Choose an avatar'),
+      content: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: avatarOptions.entries.map((entry) {
+          final data = entry.value;
+          return GestureDetector(
+            onTap: () {
+              profile.avatarKey = entry.key;
+              profile.update();
+              Navigator.of(context).pop();
+            },
+            child: CircleAvatar(
+              radius: 26,
+              backgroundColor: (data['color'] as Color).withOpacity(0.15),
+              child: Icon(data['icon'] as IconData, color: data['color'] as Color, size: 26),
+            ),
+          );
+        }).toList(),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text('Cancel')),
+      ],
+    ),
+  );
+}
+
+Widget buildAvatarIcon(ProfileStore profile, {double radius = 16}) {
+  final data = avatarOptions[profile.avatarKey] ?? avatarOptions['default']!;
+  return CircleAvatar(
+    radius: radius,
+    backgroundColor: (data['color'] as Color).withOpacity(0.15),
+    child: Icon(data['icon'] as IconData, color: data['color'] as Color, size: radius),
+  );
+}
+
+class Co2ProgressRing extends StatelessWidget {
+  final double startingTotal;
+  final double currentTotal;
+  final double size;
+
+  const Co2ProgressRing({required this.startingTotal, required this.currentTotal, this.size = 160});
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = startingTotal - currentTotal;
+    final percent = startingTotal > 0 ? (saved / startingTotal).clamp(0.0, 1.0) : 0.0;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: Size(size, size),
+            painter: _RingPainter(percent: percent),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${(saved / 1000).toStringAsFixed(1)}t / ${(startingTotal / 1000).toStringAsFixed(1)}t',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kText),
+              ),
+              Text('saved / total', style: TextStyle(fontSize: 11, color: kTextSubtle)),
+              SizedBox(height: 4),
+              Text('${(percent * 100).toStringAsFixed(0)}% saved', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kPrimary)),
+            ],
+          ),
+        ],    
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  final double percent;
+  _RingPainter({required this.percent});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 10;
+
+    final bgPaint = Paint()
+      ..color = kBorder
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    final fgPaint = Paint()
+      ..color = kPrimary
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -3.14159 / 2,
+      2 * 3.14159 * percent,
+      false,
+      fgPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter oldDelegate) => oldDelegate.percent != percent;
+}
+
 // ── Results Screen Comparison ───────────────────────────
 const Map<String, String> comparisonLabels = {
   'miles_driven': 'miles driven',
@@ -1395,21 +1552,28 @@ class _GaugePainter extends CustomPainter {
 // ── Progress Tracker ─────────────────────────────────────────────
 class RouteTracker extends NavigatorObserver {
   final ProfileStore profileStore;
-  RouteTracker(this.profileStore);
+  final GoRouter router;
+  RouteTracker(this.profileStore, this.router);
 
-  void _track(Route<dynamic>? route) {
-    final name = route?.settings.name;
-    if (name != null && name != '/' && !name.startsWith('/maintenance') && !name.startsWith('/auth') && !name.startsWith('/login')) {
-      profileStore.lastRoute = name;
+  void _track() {
+    final location = router.routerDelegate.currentConfiguration.uri.toString();
+    if (location.isNotEmpty &&
+        location != '/' &&
+        !location.startsWith('/maintenance') &&
+        !location.startsWith('/auth') &&
+        !location.startsWith('/login') &&
+        !location.startsWith('/dashboard') &&
+        !location.startsWith('/answers')) {
+      profileStore.lastRoute = location;
       profileStore.saveLastRouteOnly();
     }
   }
 
   @override
-  void didPush(Route route, Route? previousRoute) => _track(route);
+  void didPush(Route route, Route? previousRoute) => _track();
 
   @override
-  void didReplace({Route? newRoute, Route? oldRoute}) => _track(newRoute);
+  void didReplace({Route? newRoute, Route? oldRoute}) => _track();
 }
 
 // ── Under Construction Screen ─────────────────────────────────────────────
@@ -1466,9 +1630,7 @@ class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
     if (user != null) {
       final profile = Provider.of<ProfileStore>(context, listen: false);
       await profile.loadFromFirestore();
-      if (mounted) {
-        context.go(profile.lastRoute ?? '/auth');
-      }
+      if (mounted) context.go(profile.lastRoute ?? '/info');
       return;
     }
     setState(() => _checking = false);
@@ -1575,7 +1737,7 @@ class _AuthChoiceScreenState extends State<AuthChoiceScreen> {
 // ── Login Screen ────────────────────────────────────────────────────────────
 class LoginScreen extends StatefulWidget {
   final String redirectTo;
-  const LoginScreen({this.redirectTo = '/energy-intro'});
+  const LoginScreen({this.redirectTo = '/dashboard'});
 
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -1665,6 +1827,59 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordDialog() {
+    final resetController = TextEditingController(text: _emailController.text);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Reset your password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Enter your email and we\'ll send you a link to reset your password.',
+                style: TextStyle(color: kTextSubtle, fontSize: 13),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: resetController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(hintText: 'you@example.com'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final email = resetController.text.trim();
+                if (email.isEmpty) return;
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Check your inbox for a reset link.')),
+                  );
+                } catch (e) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Could not send reset email. Check the address and try again.')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+              child: Text('Send reset link'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1708,7 +1923,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: true,
                     decoration: InputDecoration(hintText: 'At least 6 characters'),
                   ),
-                  SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _showForgotPasswordDialog,
+                      child: Text('Forgot password?', style: TextStyle(color: kTextSubtle, fontSize: 13)),
+                    ),
+                  ),
+                  SizedBox(height: 12),
 
                   if (_error != null) ...[
                     Text(_error!, style: TextStyle(color: Colors.red, fontSize: 13), textAlign: TextAlign.center),
@@ -1775,8 +1997,352 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+// ── Dashboard Screen ─────────────────────────────────────────────────────
+class DashboardScreen extends StatefulWidget {
+  @override
+  _DashboardScreenState createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _loading = true;
+  Map<String, dynamic>? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    try {
+      final response = await http.post(
+        Uri.parse('https://netzero-production.up.railway.app/recommendations'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'profile': profile.toProfile(),
+          'completed_actions': profile.completedActions,
+          'dismissed_actions': profile.dismissedActions.map((a) => a['name']).toList(),
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _data = jsonDecode(response.body);
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final phase1Done = profile.phase1Complete;
+    final quizDone = profile.homeownerAnswered;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go(profile.lastRoute ?? '/auth'),
+        ),
+        title: Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => context.go('/info-from-dashboard'),
+            child: Text('About this app', style: TextStyle(color: kTextSubtle, fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+        ),
+        actions: [_authBarButton(context, hideMyProfile: true), SizedBox(width: 8)],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: _loading
+              ? Center(child: CircularProgressIndicator(color: kPrimary))
+              : Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Text('My Dashboard', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText)),
+                      SizedBox(height: 30),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            height: 160,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                SizedBox(height: 12),
+                                Consumer<ProfileStore>(
+                                  builder: (context, profile, child) {
+                                    return GestureDetector(
+                                      onTap: () => showAvatarPicker(context, profile),
+                                      child: buildAvatarIcon(profile, radius: 48),
+                                    );
+                                  },
+                                ),
+                                SizedBox(height: 10),
+                                TextButton(
+                                  onPressed: () => context.go('/answers'),
+                                  child: Text('See my answers', style: TextStyle(color: kTextSubtle, fontSize: 16, fontWeight: FontWeight.bold)),
+                                ),
+                                SizedBox(height: 12),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: 75),
+                          Co2ProgressRing(
+                            startingTotal: (_data?['starting_total_kg_co2e'] as num?)?.toDouble() ?? 0,
+                            currentTotal: (_data?['current_total_kg_co2e'] as num?)?.toDouble() ?? 0,
+                            size: 160,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 32),
+                      SizedBox(height: 32),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('  My Tasks', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: kSurface,
+                          border: Border.all(color: kBorder),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (!phase1Done) ...[
+                              Text('Calculate your CO2 emissions', style: TextStyle(color: kText)),
+                              SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () => context.go(profile.lastRoute ?? '/energy-intro'),
+                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                child: Text('Get started →'),
+                              ),
+                            ] else if (!quizDone) ...[
+                              Text('Complete your habits quiz', style: TextStyle(color: kText)),
+                              SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () => context.go('/quiz'),
+                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                child: Text('Continue quiz →'),
+                              ),
+                            ] else if (_data != null && (_data!['recommendations'] as List).isNotEmpty) ...[
+                              Text((_data!['recommendations'] as List).first['label'] as String, style: TextStyle(color: kText)),
+                              SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () => context.go('/actions'),
+                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                child: Text('View action →'),
+                              ),
+                            ] else ...[
+                              Text('You\'ve completed everything! 🎉', style: TextStyle(color: kText)),
+                            ],
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('View Completed Tasks', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: kSurface,
+                          border: Border.all(color: kBorder),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${profile.completedActionsData.length} task(s) completed',
+                                style: TextStyle(color: kText),
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => context.go('/completed-tasks'),
+                              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                              child: Text('View →'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Answers Review Screen ────────────────────────────────────────────────
+class AnswersScreen extends StatelessWidget {
+  void _editField(BuildContext context, ProfileStore profile, String route) {
+    profile.returningFromEdit = true;
+    context.go(route);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    final sections = <String, List<Map<String, dynamic>>>{
+      'Energy': [
+        {'label': 'Number of people', 'value': '${profile.numPeople ?? '—'}', 'route': '/num-people'},
+        {'label': 'Solar panels', 'value': profile.solarPanelsAnswered ? (profile.solarPanels ? 'Yes' : 'No') : '—', 'route': '/solar'},
+        {'label': 'Heating fuel', 'value': profile.fuelTypeAnswered ? profile.fuelType : '—', 'route': '/heating-fuel'},
+        {'label': 'Hob type', 'value': profile.hobTypeAnswered ? profile.hobType : '—', 'route': '/hob-type'},
+        {'label': 'Combined billing', 'value': profile.combinedBilling == null ? '—' : (profile.combinedBilling! ? 'One combined bill' : 'Separate bills'), 'route': '/combined-billing'},
+        if (profile.combinedBilling == true)
+          {'label': 'Combined gas & electricity spend', 'value': '£${formatMoney(profile.monthlyCombinedSpend)}', 'route': '/gas-elec-spend'}
+        else ...[
+          {'label': 'Gas spend', 'value': '£${formatMoney(profile.monthlyGasSpend)}', 'route': '/gas-spend'},
+          {'label': 'Electricity spend', 'value': '£${formatMoney(profile.monthlyElecSpend)}', 'route': '/elec-spend'},
+        ],
+        {'label': 'Water spend', 'value': '£${formatMoney(profile.monthlyWaterSpend)}', 'route': '/water-spend'},
+        {'label': 'Tariff', 'value': profile.tariffAnswered ? profile.tariff : '—', 'route': '/tariff-type'},
+      ],
+      'Transport': [
+        {'label': 'Cars', 'value': '${profile.cars.length} car(s)', 'route': '/car-size'},
+        {'label': 'Bus/taxi spend', 'value': '£${formatMoney(profile.monthlyBusSpend)}', 'route': '/bus-spend'},
+        {'label': 'Train spend', 'value': '£${formatMoney(profile.monthlyTrainSpend)}', 'route': '/train-spend'},
+      ],
+      'Flights': [
+        {'label': 'Trips', 'value': '${profile.flights.length} trip(s)', 'route': '/flights-question'},
+      ],
+      'Diet': [
+        {'label': 'Red meat days/week', 'value': '${profile.rmDays}', 'route': '/rm-days'},
+        {'label': 'White meat days/week', 'value': '${profile.wmDays}', 'route': '/wm-days'},
+        {'label': 'Weekly shop spend', 'value': '£${formatMoney(profile.nonMeatSpend)}', 'route': '/weekly-shop'},
+      ],
+      'Waste': [
+        {'label': 'Recycling habits', 'value': profile.wasteAnswered ? profile.wasteAction : '—', 'route': '/waste'},
+        {'label': 'Food waste', 'value': profile.foodWasteAnswered ? profile.foodWasteAction : '—', 'route': '/food-waste'},
+      ],
+      'Pets': [
+        {'label': 'Pets', 'value': '${profile.pets.length} pet(s)', 'route': '/pets-question'},
+      ],
+      'Spending': [
+        {'label': 'Takeaway', 'value': '£${formatMoney(profile.monthlyTakeaway)}', 'route': '/spending/takeaway'},
+        {'label': 'Soft drinks', 'value': '£${formatMoney(profile.monthlyDrinks)}', 'route': '/spending/drinks'},
+        {'label': 'Alcohol', 'value': '£${formatMoney(profile.monthlyAlcohol)}', 'route': '/spending/alcohol'},
+        {'label': 'Tobacco', 'value': '£${formatMoney(profile.monthlyTobacco)}', 'route': '/spending/tobacco'},
+        {'label': 'Clothes', 'value': '£${formatMoney(profile.monthlyClothes)}', 'route': '/spending/clothes'},
+        {'label': 'Soap & detergents', 'value': '£${formatMoney(profile.monthlySoap)}', 'route': '/spending/soap'},
+        {'label': 'Medicine', 'value': '£${formatMoney(profile.monthlyMedicine)}', 'route': '/spending/medicine'},
+        {'label': 'Electronics', 'value': '£${formatMoney(profile.yearlyElectronics)}', 'route': '/spending/electronics'},
+        {'label': 'Tools & machinery', 'value': '£${formatMoney(profile.yearlyMachinery)}', 'route': '/spending/machinery'},
+        {'label': 'Education', 'value': '£${formatMoney(profile.monthlyEducation)}', 'route': '/spending/education'},
+        {'label': 'Healthcare', 'value': '£${formatMoney(profile.monthlyHealthcare)}', 'route': '/spending/healthcare'},
+        {'label': 'Care homes', 'value': '£${formatMoney(profile.monthlyCare)}', 'route': '/spending/care'},
+        {'label': 'Furniture', 'value': '£${formatMoney(profile.yearlyFurniture)}', 'route': '/spending/furniture'},
+        {'label': 'Services', 'value': '£${formatMoney(profile.monthlyServices)}', 'route': '/spending/services'},
+      ],
+      'Home Info': [
+        {'label': 'Property type', 'value': profile.propertyTypeAnswered ? profile.propertyType : '—', 'route': '/property-type'},
+        {'label': 'Wall type', 'value': profile.wallTypeAnswered ? profile.wallType : '—', 'route': '/wall-type'},
+        {'label': 'Boiler age', 'value': profile.boilerAnswered ? profile.boilerAge : '—', 'route': '/boiler-age'},
+        {'label': 'Loft insulation', 'value': profile.insulationThicknessAnswered ? profile.insulationThickness : '—', 'route': '/loft-insulation'},
+        {'label': 'Shower type', 'value': profile.showerTypeAnswered ? profile.showerType : '—', 'route': '/shower-type'},
+      ],
+      'Habits': [
+        {'label': 'Shower time', 'value': '${profile.showerTime} min', 'route': '/shower-time'},
+        {'label': 'Radiator bleeding', 'value': profile.radiatorBleedingAnswered ? profile.radiatorBleeding : '—', 'route': '/radiator-bleeding'},
+        {'label': 'Washing loads/week', 'value': '${profile.washingFrequency}', 'route': '/washing-amount'},
+        {'label': 'Washing temperature', 'value': profile.washingTemperatureAnswered ? profile.washingTemperature : '—', 'route': '/washing-temperature'},
+        {'label': 'Homeowner or renter', 'value': profile.homeownerAnswered ? profile.homeowner : '—', 'route': '/homeowner'},
+      ],
+    };
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        actions: [_authBarButton(context), SizedBox(width: 8)],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('My Answers', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText)),
+                  SizedBox(height: 8),
+                  Text('Tap any answer to change it.', style: TextStyle(color: kTextSubtle, fontSize: 13)),
+                  SizedBox(height: 24),
+                  ...sections.entries.map((section) {
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(section.key, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: kPrimary)),
+                          SizedBox(height: 8),
+                          ...section.value.map((field) {
+                            return GestureDetector(
+                              onTap: () => _editField(context, profile, field['route'] as String),
+                              child: Container(
+                                margin: EdgeInsets.only(bottom: 8),
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: kSurface,
+                                  border: Border.all(color: kBorder),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(child: Text(field['label'] as String, style: TextStyle(color: kText))),
+                                    Text(field['value'] as String, style: TextStyle(color: kTextSubtle, fontWeight: FontWeight.bold)),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.chevron_right, color: kTextSubtle, size: 18),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Info Screen ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 class InfoScreen extends StatelessWidget {
+  final String returnRoute;
+  const InfoScreen({this.returnRoute = '/auth'});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1785,7 +2351,7 @@ class InfoScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/auth'),
+          onPressed: () => context.go(returnRoute),
         ),
         actions: [
           _authBarButton(context),
@@ -1844,6 +2410,7 @@ class InfoScreen extends StatelessWidget {
                       _bulletPoint('Emission reduction actions'),
                     ],
                   ),
+                  SizedBox(height: 15),
                   Text.rich(
                     TextSpan(
                       style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
@@ -1858,7 +2425,7 @@ class InfoScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'This calculates your households personal CO2 emissions. This shows you where your emissions are actually coming from and the areas to improve upon the most.',
+                    'This calculates your households personal CO2 emissions to show you where your emissions are actually coming from, and the areas to improve upon the most.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                     textAlign: TextAlign.left,
                   ),
@@ -1877,7 +2444,7 @@ class InfoScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'The short habit quiz helps to identify how the reduction actions can best fit around your family and tailors the recommendations for you.',
+                    'The short habit quiz helps to identify how to best fit the carbon reduction actions around you and your family, to give you a fully personalised plan.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                     textAlign: TextAlign.left,
                   ),
@@ -1896,7 +2463,7 @@ class InfoScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'This is where you can see steps to reduce your emissions! Each activity shows you how much CO2 you can save, alongside the money you will save each year from doing it! If you don’t like an action simply skip it and move on to the next one.',
+                    'This is where you can see steps to reduce your emissions! Each activity shows you how much CO2 you can save, alongside the money you could also save each year! If you don\’t like an action simply skip it and move on to the next one.',
                     style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
                     textAlign: TextAlign.left,
                   ),
@@ -1910,7 +2477,7 @@ class InfoScreen extends StatelessWidget {
                           text: 'shouldn\'t force you',
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        TextSpan(text: ' to give up habits, activities or things you love. It should be integrated seamlessly into everyone\'s lives.'),
+                        TextSpan(text: ' to give up habits, activities or things you love. It should be integrated seamlessly into your life.'),
                       ],
                     ),
                     textAlign: TextAlign.left,
@@ -1957,39 +2524,33 @@ class EnergyIntroScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 60,
-                right: 24,
-                child: Transform.rotate(
-                  angle: -0.6,
-                  child: Image.asset(
-                    'assets/images/bolt_icon.png',
-                    height: 110,
-                    color: kPrimary,
-                  ),
-                ),
-              ),
-              Padding(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/energy_cover_background1.png',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: screenWrapper(
+              child: Padding(
                 padding: EdgeInsets.all(32.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: 55),
                     Text(
                       'Energy',
                       style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 4),
                     Text(
                       'About your home\'s energy use',
                       style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 48),
+                    Spacer(),
+                    SizedBox(height: 26),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -2005,9 +2566,9 @@ class EnergyIntroScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -2041,7 +2602,12 @@ class _NumPeopleScreenState extends State<NumPeopleScreen> {
       onNext: () {
         profile.numPeople = _numPeople;
         profile.update();
-        context.go('/solar');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/solar');
+        }
       },
       answerContent: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -2101,10 +2667,15 @@ class _SolarPanelsScreenState extends State<SolarPanelsScreen> {
         profile.solarPanels = _selected!;
         profile.solarPanelsAnswered = true;
         profile.update();
-        if (_selected == true) {
-          context.go('/solar-usage');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
         } else {
-          context.go('/heating-fuel');
+          if (_selected == true) {
+            context.go('/solar-usage');
+          } else {
+            context.go('/heating-fuel');
+          }
         }
       },
       answerContent: buildYesNoOptions(
@@ -2150,7 +2721,12 @@ class _SolarUsageScreenState extends State<SolarUsageScreen> {
       onNext: () {
         profile.monthlySolarKwh = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/heating-fuel');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/heating-fuel');
+        }
       },
       answerContent: Column(
         children: [
@@ -2238,7 +2814,12 @@ class _HeatingFuelScreenState extends State<HeatingFuelScreen> {
         profile.fuelType = _selected!;
         profile.fuelTypeAnswered = true;
         profile.update();
-        context.go('/hob-type');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/hob-type');
+        }
       },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
@@ -2296,7 +2877,12 @@ class _HobTypeScreenState extends State<HobTypeScreen> {
         profile.hobType = _selected!;
         profile.hobTypeAnswered = true;
         profile.update();
-        context.go('/combined-billing');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/combined-billing');
+        }
       },
       answerContent: buildTwoOptionBoxes(
         selected: _selected,
@@ -2340,10 +2926,15 @@ class _CombinedBillingScreenState extends State<CombinedBillingScreen> {
       onNext: () {
         profile.combinedBilling = _selected!;
         profile.update();
-        if (_selected == true) {
-          context.go('/gas-elec-spend');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
         } else {
-          context.go('/gas-spend');
+          if (_selected == true) {
+            context.go('/gas-elec-spend');
+          } else {
+            context.go('/gas-spend');
+          }
         }
       },
       answerContent: buildYesNoOptions(
@@ -2393,7 +2984,12 @@ class _CombinedSpendScreenState extends State<CombinedSpendScreen> {
       onNext: () {
         profile.monthlyCombinedSpend = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/water-spend');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/water-spend');
+        }
       },
       answerContent: Column(
         children: [
@@ -2481,7 +3077,12 @@ class _GasSpendScreenState extends State<GasSpendScreen> {
       onNext: () {
         profile.monthlyGasSpend = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/elec-spend');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/elec-spend');
+        }
       },
       answerContent: Column(
         children: [
@@ -2569,7 +3170,12 @@ class _ElecSpendScreenState extends State<ElecSpendScreen> {
       onNext: () {
         profile.monthlyElecSpend = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/water-spend');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/water-spend');
+        }
       },
       answerContent: Column(
         children: [
@@ -2657,7 +3263,12 @@ class _WaterSpendScreenState extends State<WaterSpendScreen> {
       onNext: () {
         profile.monthlyWaterSpend = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/tariff-type');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/tariff-type');
+        }
       },
       answerContent: Column(
         children: [
@@ -2739,7 +3350,12 @@ class _TariffTypeScreenState extends State<TariffTypeScreen> {
         profile.tariff = _selected! ? 'PPA' : 'standard';
         profile.tariffAnswered = true;
         profile.update();
-        context.go('/transport-intro');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/transport-intro');
+        }
       },
       answerContent: buildYesNoOptions(
         selected: _selected,
@@ -2763,6 +3379,7 @@ class TransportIntroScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -2775,35 +3392,33 @@ class TransportIntroScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 60,
-                right: 24,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Icon(Icons.directions_car, color: kTransportBlue, size: 90),
-                ),
-              ),
-              Padding(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/transport_cover_background.png',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: screenWrapper(
+              child: Padding(
                 padding: EdgeInsets.all(32.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: 30),
                     Text(
                       'Transport',
                       style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 2),
                     Text(
                       'About how you get around',
                       style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 48),
+                    Spacer(),
+                    SizedBox(height: 30),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -2819,9 +3434,9 @@ class TransportIntroScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -2977,7 +3592,12 @@ class _CarSizeScreenState extends State<CarSizeScreen> {
           profile.currentCarSize = _selected;
           context.go('/car-fuel');
         } else {
-          context.go('/bus-spend');
+          if (profile.returningFromEdit) {
+            profile.returningFromEdit = false;
+            context.go('/answers');
+          } else {
+            context.go('/bus-spend');
+          }
         }
       },
       answerContent: SizedBox(
@@ -3146,7 +3766,12 @@ class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
         profile.currentCarFuel = null;
         profile.currentCarMileage = null;
         profile.update();
-        context.go('/car-size');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/car-size');
+        }
       },
       answerContent: Column(
         children: [
@@ -3237,7 +3862,12 @@ class _BusSpendScreenState extends State<BusSpendScreen> {
         profile.monthlyBusSpend = double.tryParse(_controller.text) ?? 0;
         profile.busSpendAnswered = true;
         profile.update();
-        context.go('/train-spend');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/train-spend');
+        }
       },
       answerContent: Column(
         children: [
@@ -3328,7 +3958,12 @@ class _TrainSpendScreenState extends State<TrainSpendScreen> {
         profile.monthlyTrainSpend = double.tryParse(_controller.text) ?? 0;
         profile.trainSpendAnswered = true;
         profile.update();
-        context.go('/flights-intro');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/flights-intro');
+        }
       },
       answerContent: Column(
         children: [
@@ -3385,9 +4020,9 @@ const Color kFlightsGreen = Color(0xFF01821F);
 // ── Flights Section Intro ───────────────────────────────────────────────
 class FlightsIntroScreen extends StatelessWidget {
   @override
-
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -3400,35 +4035,33 @@ class FlightsIntroScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 60,
-                right: 24,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Icon(Icons.flight, color: kFlightsGreen, size: 90),
-                ),
-              ),
-              Padding(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/flight_cover_background.png',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: screenWrapper(
+              child: Padding(
                 padding: EdgeInsets.all(32.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: 20),
                     Text(
                       'Flights',
                       style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 2),
                     Text(
                       'About your air travel',
                       style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 48),
+                    Spacer(),
+                    SizedBox(height: 35),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -3444,9 +4077,9 @@ class FlightsIntroScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -3864,140 +4497,154 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: kText),
-        onPressed: () => context.go('/flights-intro'),
-      ),
-      actions: [
-        if (_currentCo2 != null)
-          Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Center(
-              child: Row(
-                children: [
-                  Icon(Icons.eco, color: kFlightsGreen, size: 18),
-                  SizedBox(width: 4),
-                  Text('${_currentCo2!.toStringAsFixed(0)} kg', style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
-                ],
-              ),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/flights-intro'),
+        ),
+        actions: [
+          _authBarButton(context, accentColor: kFlightsGreen),
+          SizedBox(width: 8),
+        ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: 0.45,
+              minHeight: 8,
+              backgroundColor: kBorder,
+              valueColor: AlwaysStoppedAnimation<Color>(kFlightsGreen),
             ),
-          ),
-        _authBarButton(context, accentColor: kFlightsGreen),
-        SizedBox(width: 8),
-      ],
-      bottom: PreferredSize(
-        preferredSize: Size.fromHeight(8),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: 0.45,
-            minHeight: 8,
-            backgroundColor: kBorder,
-            valueColor: AlwaysStoppedAnimation<Color>(kFlightsGreen),
           ),
         ),
       ),
-    ),
-    body: SafeArea(
-      child: Column(
-        children: [
-          if (_step == _TripStep.none)
-            Padding(
-              padding: EdgeInsets.fromLTRB(24, 20, 24, 8),
-              child: Column(
-                children: [
-                  Text(
-                    'Your recent holidays',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Tap the globe to select your recent holiday destinations',
-                    style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: Stack(
-              children: [
-                Center(
-                  child: Listener(
-                    onPointerDown: (_) => _controller.enableAutoRotate = false,
-                    child: Earth3D(
-                      controller: _controller,
-                      texture: const AssetImage('assets/images/2k_earth-day.jpg'),
-                      initialScale: 3,
-                    ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.eco, color: kFlightsGreen, size: 18),
+                      SizedBox(width: 4),
+                      Text(
+                        _currentCo2 != null ? '${_currentCo2!.toStringAsFixed(0)} kg' : '...',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: kText, fontSize: 14),
+                      ),
+                    ],
                   ),
                 ),
-                if (_step == _TripStep.none)
-                  Positioned(
-                    left: 24,
-                    right: 24,
-                    bottom: 32,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_showTripsList) _buildTripsList(),
-                        if (Provider.of<ProfileStore>(context, listen: false).flights.isNotEmpty)
-                          TextButton(
-                            onPressed: () => setState(() => _showTripsList = !_showTripsList),
-                            child: Text(
-                              _showTripsList ? 'Hide trips' : 'See trips',
-                              style: TextStyle(color: kFlightsGreen, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () => context.go('/uk-intro'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kFlightsGreen,
-                              padding: EdgeInsets.symmetric(vertical: 18),
-                              shape: StadiumBorder(),
-                            ),
-                            child: Text(
-                              Provider.of<ProfileStore>(context, listen: false).flights.isEmpty
-                                  ? 'No flights →'
-                                  : 'No more flights →',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                          ),
+              ),
+              if (_step == _TripStep.none)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(24, 20, 24, 8),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Your recent holidays',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Tap the globe to select your recent holiday destinations',
+                        style: TextStyle(fontSize: 14, color: kTextSubtle, fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Listener(
+                        onPointerDown: (_) => _controller.enableAutoRotate = false,
+                        child: Earth3D(
+                          controller: _controller,
+                          texture: const AssetImage('assets/images/2k_earth-day.jpg'),
+                          initialScale: 3,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                if (_step != _TripStep.none)
-                  Positioned.fill(
-                    child: Center(
-                      child: _buildOverlayPanel(),
-                    ),
-                  ),
-              ],
-            ),
+                    if (_step == _TripStep.none)
+                      Positioned(
+                        left: 24,
+                        right: 24,
+                        bottom: 32,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_showTripsList) _buildTripsList(),
+                            if (Provider.of<ProfileStore>(context, listen: false).flights.isNotEmpty)
+                              TextButton(
+                                onPressed: () => setState(() => _showTripsList = !_showTripsList),
+                                child: Text(
+                                  _showTripsList ? 'Hide trips' : 'See trips',
+                                  style: TextStyle(color: kFlightsGreen, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  final profile = Provider.of<ProfileStore>(context, listen: false);
+                                  if (profile.returningFromEdit) {
+                                    profile.returningFromEdit = false;
+                                    context.go('/answers');
+                                  } else {
+                                    context.go('/uk-intro');
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kFlightsGreen,
+                                  padding: EdgeInsets.symmetric(vertical: 18),
+                                  shape: StadiumBorder(),
+                                ),
+                                child: Text(
+                                  Provider.of<ProfileStore>(context, listen: false).flights.isEmpty
+                                      ? 'No flights →'
+                                      : 'No more flights →',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_step != _TripStep.none)
+                      Positioned.fill(
+                        child: Center(
+                          child: _buildOverlayPanel(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 const Color kTripsRed = Color(0xFFE66051);
 // ── UK Trips Section Intro ───────────────────────────────────────────────
 class UKIntroScreen extends StatelessWidget {
   @override
-
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -4010,35 +4657,33 @@ class UKIntroScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 60,
-                right: 24,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Icon(Icons.flight, color: kTripsRed, size: 90),
-                ),
-              ),
-              Padding(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/uk_cover_background.png',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: screenWrapper(
+              child: Padding(
                 padding: EdgeInsets.all(32.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: 30),
                     Text(
                       'UK Stays',
                       style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 2),
                     Text(
                       'About nights away in the UK',
                       style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 48),
+                    Spacer(),
+                    SizedBox(height: 40),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -4054,9 +4699,9 @@ class UKIntroScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -4092,14 +4737,19 @@ class _HotelNightsScreenState extends State<HotelNightsScreen> {
 
     return QuizFrame(
       progress: 0.6875,
-      question: 'Roughly how many nights per year do you stay in UK airbnb\'s or holiday homes?',
+      question: 'Roughly how many nights per year do you stay in UK hotels?',
       answered: _hasValue,
-      backRoute: '/UK-intro',
+      backRoute: '/uk-intro',
       accentColor: kTripsRed,
       onNext: () {
         profile.hotelNights = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/airbnb-nights');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/airbnb-nights');
+        }
       },
       answerContent: Column(
         children: [
@@ -4182,14 +4832,19 @@ class _AirbnbNightsScreenState extends State<AirbnbNightsScreen> {
 
     return QuizFrame(
       progress: 0.71875,
-      question: 'Roughly how many nights per year do you stay in UK hotels?',
+      question: 'Roughly how many nights per year do you stay in UK airbnb\'s or holiday homes?',
       answered: _hasValue,
       backRoute: '/hotel-nights',
       accentColor: kTripsRed,
       onNext: () {
         profile.airbnbNights = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/pets-intro');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/pets-intro');
+        }
       },
       answerContent: Column(
         children: [
@@ -4242,13 +4897,13 @@ class _AirbnbNightsScreenState extends State<AirbnbNightsScreen> {
   }
 }
 
-const Color kPetsPurple = Color(0xFFB660F3);
+const Color kPetsPurple = Color(0xFF8C50B6);
 // ── Pets Section Intro ───────────────────────────────────────────────
 class PetsIntroScreen extends StatelessWidget {
   @override
-
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -4261,35 +4916,33 @@ class PetsIntroScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 60,
-                right: 24,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Icon(Icons.flight, color: kPetsPurple, size: 90),
-                ),
-              ),
-              Padding(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/pets_cover_background.png',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: screenWrapper(
+              child: Padding(
                 padding: EdgeInsets.all(32.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: 146),
                     Text(
                       'Your Pets',
                       style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 2),
                     Text(
                       'Your pets and their diets',
                       style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 48),
+                    Spacer(),
+                    SizedBox(height: 45),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -4305,9 +4958,9 @@ class PetsIntroScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -4425,7 +5078,12 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
       onNext: () {
         profile.pets = _pets;
         profile.update();
-        context.go('/diet-intro');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/diet-intro');
+        }
       },
       answerContent: SizedBox(
         height: MediaQuery.of(context).size.height * 0.5,
@@ -4450,13 +5108,13 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
   }
 }
 
-const Color kDietOrange = Color(0xFFDC983F);
+const Color kDietOrange = Color(0xFFF09723); 
 // ── Diet Section Intro ───────────────────────────────────────────────
 class DietIntroScreen extends StatelessWidget {
   @override
-
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -4469,35 +5127,33 @@ class DietIntroScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 60,
-                right: 24,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Icon(Icons.restaurant, color: kDietOrange, size: 90),
-                ),
-              ),
-              Padding(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/diet_cover_background.png',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: screenWrapper(
+              child: Padding(
                 padding: EdgeInsets.all(32.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: 27),
                     Text(
                       'Diet and Waste',
                       style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 2),
                     Text(
                       'Your food\'s footprint',
                       style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 48),
+                    Spacer(),
+                    SizedBox(height: 40),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -4513,9 +5169,9 @@ class DietIntroScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -4558,7 +5214,12 @@ class _RMDaysScreenState extends State<RMDaysScreen> {
       onNext: () {
         profile.rmDays = int.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/wm-days');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/wm-days');
+        }
       },
       answerContent: Column(
         children: [
@@ -4648,7 +5309,12 @@ class _WMDaysScreenState extends State<WMDaysScreen> {
       onNext: () {
         profile.wmDays = int.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/weekly-shop');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/weekly-shop');
+        }
       },
       answerContent: Column(
         children: [
@@ -4737,7 +5403,12 @@ class _WeeklyShopScreenState extends State<WeeklyShopScreen> {
       onNext: () {
         profile.nonMeatSpend = double.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/waste');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/waste');
+        }
       },
       answerContent: Column(
         children: [
@@ -4820,7 +5491,12 @@ class _WasteScreenState extends State<WasteScreen> {
         profile.wasteAction = _selected!;
         profile.wasteAnswered = true;
         profile.update();
-        context.go('/food-waste');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/food-waste');
+        }
       },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
@@ -4878,7 +5554,12 @@ class _FoodWasteScreenState extends State<FoodWasteScreen> {
         profile.foodWasteAction = _selected!;
         profile.foodWasteAnswered = true;
         profile.update();
-        context.go('/spending-intro');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/spending-intro');
+        }
       },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
@@ -4904,9 +5585,9 @@ class _FoodWasteScreenState extends State<FoodWasteScreen> {
 // ── Spending Section Intro ───────────────────────────────────────────────
 class SpendingIntroScreen extends StatelessWidget {
   @override
-
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -4919,35 +5600,33 @@ class SpendingIntroScreen extends StatelessWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: SafeArea(
-        child: screenWrapper(
-          child: Stack(
-            children: [
-              Positioned(
-                top: 60,
-                right: 24,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Icon(Icons.monetization_on, color: kSpendingBlue, size: 90),
-                ),
-              ),
-              Padding(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/spending_cover_background.png',
+            fit: BoxFit.cover,
+          ),
+          SafeArea(
+            child: screenWrapper(
+              child: Padding(
                 padding: EdgeInsets.all(32.0),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    SizedBox(height: 22),
                     Text(
                       'Spending',
                       style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: kTextSubtle),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 2),
                     Text(
                       'Your spending and lifestyle habits',
                       style: TextStyle(fontSize: 16, color: kTextSubtle, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 48),
+                    Spacer(),
+                    SizedBox(height: 33),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -4963,9 +5642,9 @@ class SpendingIntroScreen extends StatelessWidget {
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -5060,7 +5739,12 @@ class _SpendingCategoryScreenState extends State<SpendingCategoryScreen> {
       onNext: () {
         _setValue(profile, widget.categoryKey, double.tryParse(_controller.text) ?? 0);
         profile.update();
-        context.go('/spending-hub');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/spending-hub');
+        }
       },
       answerContent: Column(
         children: [
@@ -5150,79 +5834,85 @@ class SpendingHubScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Text(
-                'What do you spend on?',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Tap a category to add an amount. Skip anything that doesn\'t apply.',
-                style: TextStyle(fontSize: 13, color: kTextSubtle),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 24),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: GridView.count(
-                    crossAxisCount: 3,
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 0.9,
-                    children: spendingCategories.map((cat) {
-                      final value = _getValue(profile, cat['key'] as String);
-                      final hasAnswer = value > 0;
-                      return GestureDetector(
-                        onTap: () => context.go('/spending/${cat['key']}'),
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: hasAnswer ? kSpendingBlue.withOpacity(0.2) : kSurface,
-                            border: Border.all(color: hasAnswer ? kSpendingBlue : kBorder, width: hasAnswer ? 2 : 1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(cat['icon'] as IconData, color: kSpendingBlue, size: 26),
-                              SizedBox(height: 6),
-                              Text(
-                                cat['label'] as String,
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kText),
-                                textAlign: TextAlign.center,
-                              ),
-                              if (hasAnswer) ...[
-                                SizedBox(height: 2),
-                                Text('£${formatMoney(value)}', style: TextStyle(fontSize: 10, color: kSpendingBlue, fontWeight: FontWeight.bold)),
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              children: [
+                Text(
+                  'How much do you spend on...?',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Tap a category to add an amount. Skip anything that doesn\'t apply.',
+                  style: TextStyle(fontSize: 13, color: kTextSubtle),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 24),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: GridView.count(
+                      crossAxisCount: 3,
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 0.9,
+                      children: spendingCategories.map((cat) {
+                        final value = _getValue(profile, cat['key'] as String);
+                        final hasAnswer = value > 0;
+                        return GestureDetector(
+                          onTap: () => context.go('/spending/${cat['key']}'),
+                          child: Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: hasAnswer ? kSpendingBlue.withOpacity(0.2) : kSurface,
+                              border: Border.all(color: hasAnswer ? kSpendingBlue : kBorder, width: hasAnswer ? 2 : 1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(cat['icon'] as IconData, color: kSpendingBlue, size: 26),
+                                SizedBox(height: 6),
+                                Text(
+                                  cat['label'] as String,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kText),
+                                  textAlign: TextAlign.center,
+                                ),
+                                if (hasAnswer) ...[
+                                  SizedBox(height: 2),
+                                  Text('£${formatMoney(value)}', style: TextStyle(fontSize: 10, color: kSpendingBlue, fontWeight: FontWeight.bold)),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => context.go('/results'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kSpendingBlue,
-                    padding: EdgeInsets.symmetric(vertical: 18),
-                    shape: StadiumBorder(),
+                SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      profile.phase1Complete = true;
+                      profile.update();
+                      context.go('/results');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kSpendingBlue,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: StadiumBorder(),
+                    ),
+                    child: Text('See results →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText)),
                   ),
-                  child: Text('See results →', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kText)),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -5525,7 +6215,7 @@ class _LoginReminderScreenState extends State<LoginReminderScreen> {
   void _checkIfAlreadyLoggedIn() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && !user.isAnonymous) {
-      context.go('/phase2');
+      context.go('/quiz');
       return;
     }
     setState(() => _checking = false);
@@ -5728,7 +6418,12 @@ class _EnergyActionScreenState extends State<EnergyActionScreen> {
         profile.batteryStorage = _batteryStorage;
         profile.savingShower = _savingShower;
         profile.update();
-        context.go('/property-type');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/property-type');
+        }
       },
       answerContent: Column(
         children: [
@@ -5845,7 +6540,12 @@ class _PropertyTypeScreenState extends State<PropertyTypeScreen> {
         profile.propertyType = _selected!;
         profile.propertyTypeAnswered = true;
         profile.update();
-        context.go('/wall-type');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/wall-type');
+        }
       },
       answerContent: Column(
         mainAxisSize: MainAxisSize.min,
@@ -5894,7 +6594,12 @@ class _WallTypeScreenState extends State<WallTypeScreen> {
         profile.wallType = _selected! ? 'cavity' : 'solid_wall';
         profile.wallTypeAnswered = true;
         profile.update();
-        context.go('/boiler-age');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/boiler-age');
+        }
       },
       answerContent: buildYesNoOptions(
         selected: _selected,
@@ -5939,7 +6644,12 @@ class _BoilerAgeScreenState extends State<BoilerAgeScreen> {
         profile.boilerAge = _selected!;
         profile.boilerAnswered = true;
         profile.update();
-        context.go('/lightbulbs');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/lightbulbs');
+        }
       },
       answerContent: SizedBox(
         height: 420,
@@ -6091,7 +6801,12 @@ class _LightbulbsScreenState extends State<LightbulbsScreen> {
         profile.cflBulbs = _cfl;
         profile.ledBulbs = _led;
         profile.update();
-        context.go('/shower-type');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/shower-type');
+        }
       },
       answerContent: Column(
         children: _bulbTypes.map((bulb) {
@@ -6172,7 +6887,12 @@ class _ShowerTypeScreenState extends State<ShowerTypeScreen> {
         profile.showerType = _selected! ? 'power_mixer' : 'electric_shower';
         profile.showerTypeAnswered = true;
         profile.update();
-        context.go('/loft-insulation');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/loft-insulation');
+        }
       },
       answerContent: buildYesNoOptions(
         selected: _selected,
@@ -6221,7 +6941,12 @@ class _InsulationThicknessScreenState extends State<InsulationThicknessScreen> {
         profile.insulationThickness = _selected!;
         profile.insulationThicknessAnswered = true;
         profile.update();
-        context.go('/insulation-types');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/insulation-types');
+        }
       },
       answerContent: Column(
         children: [
@@ -6321,7 +7046,12 @@ class _InsulationTypesScreenState extends State<InsulationTypesScreen> {
         profile.wallInsulation = _wallInsulation;
         profile.floorInsulation = _floorInsulation;
         profile.update();
-        context.go('/shower-time');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/shower-time');
+        }
       },
       answerContent: Column(
         children: [
@@ -6414,7 +7144,12 @@ class _ShowerTimeScreenState extends State<ShowerTimeScreen> {
       onNext: () {
         profile.showerTime = int.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/radiator-bleeding');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/radiator-bleeding');
+        }
       },
       answerContent: Column(
         children: [
@@ -6493,7 +7228,12 @@ class _RadiatorBleedingScreenState extends State<RadiatorBleedingScreen> {
         profile.radiatorBleeding = _selected!;
         profile.radiatorBleedingAnswered = true;
         profile.update();
-        context.go('/washing-amount');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/washing-amount');
+        }
       },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
@@ -6555,7 +7295,12 @@ class _WashingAmountScreenState extends State<WashingAmountScreen> {
       onNext: () {
         profile.washingFrequency = int.tryParse(_controller.text) ?? 0;
         profile.update();
-        context.go('/washing-temperature');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/washing-temperature');
+        }
       },
       answerContent: Column(
         children: [
@@ -6634,7 +7379,12 @@ class _WashingTemperatureScreenState extends State<WashingTemperatureScreen> {
         profile.washingTemperature = _selected!;
         profile.washingTemperatureAnswered = true;
         profile.update();
-        context.go('/homeowner');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/homeowner');
+        }
       },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
@@ -6692,7 +7442,12 @@ class _HomeownerScreenState extends State<HomeownerScreen> {
         profile.homeowner = _selected! ? 'homeowner' : 'renter';
         profile.homeownerAnswered = true;
         profile.update();
-        context.go('/actions');
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/actions');
+        }
       },
       answerContent: buildYesNoOptions(
         selected: _selected,
@@ -6746,14 +7501,15 @@ class _ActionScreenState extends State<ActionScreen> {
           _actions = jsonDecode(response.body);
           _loading = false;
           _queue = List<Map<String, dynamic>>.from(_actions!['recommendations']);
-          if (_originalFirstActionName == null && _queue.isNotEmpty) {
-            _originalFirstActionName = _queue.first['name'] as String;
-          }
           for (final name in _skippedNames) {
             _moveToBackOfTier(name);
           }
         });
-      } 
+        if (profile.firstActionEverSeen == null && _queue.isNotEmpty) {
+          profile.firstActionEverSeen = _queue.first['name'] as String;
+          profile.update();
+        }
+      }
       else {
         setState(() {
           _error = 'Server error: ${response.statusCode}'; //if it fails give an error message
@@ -6779,7 +7535,7 @@ class _ActionScreenState extends State<ActionScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: kText),
-          onPressed: () => context.go('/phase3'),
+          onPressed: () => context.go('/homeowner'),
         ),
         actions: [
           _authBarButton(context),
@@ -6861,6 +7617,7 @@ class _ActionScreenState extends State<ActionScreen> {
   }
 
   Widget _buildResults() {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
     final currentTotal = (_actions!['current_total_kg_co2e'] as num).toDouble();
     final totalSaved = (_actions!['total_saved_kg_co2e'] as num).toDouble();
     final card = _queue.first;
@@ -6876,7 +7633,7 @@ class _ActionScreenState extends State<ActionScreen> {
         : allActions.map((a) => (a['reduction_kg_co2e'] as num).toDouble()).reduce((a, b) => a > b ? a : b);
     final fillPercent = maxReduction > 0 ? reduction / maxReduction : 0.0;
 
-    final cardColor = _queue.first['name'] == card['name']
+    final cardColor = card['name'] == profile.firstActionEverSeen
       ? kPrimary
       : actionCardColors[card['name'].hashCode.abs() % actionCardColors.length];
 
@@ -7066,6 +7823,16 @@ class _ActionScreenState extends State<ActionScreen> {
             'Total saved: ${(totalSaved / 1000).toStringAsFixed(2)}t CO₂e',
             style: TextStyle(fontSize: 16, color: kTextSubtle),
           ),
+          SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () => context.go('/placeholder'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kPrimary,
+              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: StadiumBorder(),
+            ),
+            child: Text('What next? →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );
@@ -7122,13 +7889,156 @@ class _ActionScreenState extends State<ActionScreen> {
   }
 
 
-  Future<void> _markDone() async { // no question mark as it always produces a future
+  Future<void> _markDone() async {
     final profile = Provider.of<ProfileStore>(context, listen: false);
-    final currentName = _queue.first['name'] as String;
-    profile.completedActions = [...profile.completedActions, currentName]; // ... unpacks the list from profile.completedActions
+    final currentCard = _queue.first;
+    final currentName = currentCard['name'] as String;
+    profile.completedActions = [...profile.completedActions, currentName];
+    profile.completedActionsData = [...profile.completedActionsData, currentCard];
     profile.update();
+    await _getActions();
+  }
+
+  Future<void> _revertCompleted(String name) async {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    profile.completedActions = profile.completedActions.where((n) => n != name).toList();
+    profile.completedActionsData = profile.completedActionsData.where((a) => a['name'] != name).toList();
+    profile.update();
+    Navigator.of(context).pop();
     await _getActions();
   }
 }
 
-// ---- Practice Screen -----------------------------
+// ── Placeholder Screen ────────────────────────────────────────────────────
+class PlaceholderScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/actions'),
+        ),
+        actions: [_authBarButton(context), SizedBox(width: 8)],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/images/leaf_icon.png', height: 64),
+                SizedBox(height: 24),
+                Text(
+                  'Hold tight, more features on their way!',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: kText),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'We\'re working on new ways to help you reach net zero. Please check back soon!',
+                  style: TextStyle(fontSize: 16, color: kTextSubtle, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Completed Tasks Screen ────────────────────────────────────────────────
+class CompletedTasksScreen extends StatelessWidget {
+  void _revert(BuildContext context, ProfileStore profile, String name) {
+    profile.completedActions = profile.completedActions.where((n) => n != name).toList();
+    profile.completedActionsData = profile.completedActionsData.where((a) => a['name'] != name).toList();
+    profile.update();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        actions: [_authBarButton(context, hideMyProfile: true), SizedBox(width: 8)],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Completed Tasks', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText)),
+                SizedBox(height: 8),
+                Text('Tap "Undo" if you completed something by mistake.', style: TextStyle(color: kTextSubtle, fontSize: 13)),
+                SizedBox(height: 24),
+                Expanded(
+                  child: Consumer<ProfileStore>(
+                    builder: (context, profile, child) {
+                      if (profile.completedActionsData.isEmpty) {
+                        return Center(
+                          child: Text('Nothing completed yet.', style: TextStyle(color: kTextSubtle)),
+                        );
+                      }
+                      return ListView.builder(
+                        itemCount: profile.completedActionsData.length,
+                        itemBuilder: (context, index) {
+                          final action = profile.completedActionsData[index];
+                          final reduction = (action['reduction_kg_co2e'] as num?)?.toDouble() ?? 0;
+                          final savings = (action['savings'] as num?)?.toDouble() ?? 0;
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 12),
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: kSurface,
+                              border: Border.all(color: kBorder),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(action['label'] as String, style: TextStyle(fontWeight: FontWeight.bold, color: kText)),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        '${reduction.toStringAsFixed(0)} kg CO₂e saved/yr • £${savings.toStringAsFixed(0)}/yr',
+                                        style: TextStyle(fontSize: 12, color: kTextSubtle),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => _revert(context, profile, action['name'] as String),
+                                  child: Text('Undo', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

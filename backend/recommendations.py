@@ -351,7 +351,7 @@ def get_recommendations(profile: dict, completed_actions: list = None, dismissed
         car_cost_before = calculate_annual_car_cost(adjusted_state)
         car_cost_after = calculate_annual_car_cost(new_adjusted)
         
-        annual_savings = cost_before - cost_after
+        annual_savings = (cost_before - cost_after) + (car_cost_before - car_cost_after)
 
         if reduction < 0.5:
             continue
