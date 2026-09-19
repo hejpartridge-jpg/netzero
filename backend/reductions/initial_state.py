@@ -8,19 +8,33 @@ def build_initial_state(profile: dict) -> dict:
     monthly_gas_weighting = GAS_MONTHLY_FACTORS[billing_month]
     monthly_elec_weighting = ELECTRICITY_MONTHLY_FACTORS[billing_month]
 
+    ## using yearly skipped numbers to make my life easier with variable names and code rewriting
     if profile.get("combined_billing") == True:
-        monthly_combined_spend = profile.get("monthly_combined_spend")
-        that_month_elec_spend = monthly_combined_spend * ELECTRICITY_MONTHLY_WEIGHTING[billing_month]
-        that_month_gas_spend = monthly_combined_spend * GAS_MONTHLY_WEIGHTING[billing_month]
-        yearly_gas_spend = that_month_gas_spend/monthly_gas_weighting
-        yearly_elec_spend = that_month_elec_spend/monthly_elec_weighting
+        if profile.get("combined_spend_skipped"):
+            yearly_gas_spend = (profile.get("monthly_combined_spend")) - 913.71 
+            yearly_elec_spend = (profile.get("monthly_combined_spend")) - 948.95
+        else:
+            monthly_combined_spend = profile.get("monthly_combined_spend")
+            that_month_elec_spend = monthly_combined_spend * ELECTRICITY_MONTHLY_WEIGHTING[billing_month]
+            that_month_gas_spend = monthly_combined_spend * GAS_MONTHLY_WEIGHTING[billing_month]
+            yearly_gas_spend = that_month_gas_spend/monthly_gas_weighting
+            yearly_elec_spend = that_month_elec_spend/monthly_elec_weighting
     else:
-        yearly_gas_spend = profile.get("monthly_gas_spend")/monthly_gas_weighting
-        yearly_elec_spend = profile.get("monthly_elec_spend")/monthly_elec_weighting
+        if profile.get("gas_spend_skipped"):
+            yearly_gas_spend = (profile.get("monthly_gas_spend") or 0)
+        else:
+            yearly_gas_spend = profile.get("monthly_gas_spend")/monthly_gas_weighting
+        if profile.get("elec_spend_skipped"):
+            yearly_elec_spend = (profile.get("monthly_elec_spend") or 0)
+        else:
+            yearly_elec_spend = profile.get("monthly_elec_spend")/monthly_elec_weighting
 
     ## solar panel kWh addittion
-    monthly_solar_weighting = SOLAR_MONTHLY_FACTORS[billing_month]
-    solar_self_consumed_kwh = profile.get("monthly_solar")/monthly_solar_weighting
+    if profile.get("solar_usage_skipped"):
+        solar_self_consumed_kwh = (profile.get("monthly_solar") or 0) * 12
+    else:
+        monthly_solar_weighting = SOLAR_MONTHLY_FACTORS[billing_month]
+        solar_self_consumed_kwh = (profile.get("monthly_solar") or 0) / monthly_solar_weighting
 
     yearly_elec_kwh = solar_self_consumed_kwh + yearly_elec_spend/0.2611
     yearly_gas_kwh = yearly_gas_spend/0.0733

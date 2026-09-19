@@ -726,6 +726,7 @@ class QuizFrame extends StatefulWidget {
   final String? motivationalMessage;
   final Color accentColor;
   final String nextLabel;
+  final VoidCallback? onSkip;
 
   const QuizFrame({
     required this.progress,
@@ -738,6 +739,7 @@ class QuizFrame extends StatefulWidget {
     this.motivationalMessage,
     this.accentColor = kPrimary,
     this.nextLabel = 'Next →',
+    this.onSkip,
   });
 
   @override
@@ -879,6 +881,15 @@ class _QuizFrameState extends State<QuizFrame> {
                   )
                 else
                   SizedBox(height: 54),
+                if (widget.onSkip != null) ...[
+                  SizedBox(height: 12),
+                  Center(
+                    child: TextButton(
+                      onPressed: widget.onSkip,
+                      child: Text('Skip this question', style: TextStyle(color: kTextSubtle, fontSize: 14)),
+                    ),
+                  ),
+                ],
                 ],
               ),
             ),
@@ -2609,6 +2620,11 @@ class _NumPeopleScreenState extends State<NumPeopleScreen> {
           context.go('/solar');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.numPeople = 2;
+        profile.update();
+        context.go('/solar');
+      },
       answerContent: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -2678,6 +2694,12 @@ class _SolarPanelsScreenState extends State<SolarPanelsScreen> {
           }
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.solarPanels = false;
+        profile.solarPanelsAnswered = true;
+        profile.update();
+        context.go('/heating-fuel');
+      },
       answerContent: buildYesNoOptions(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
@@ -2727,6 +2749,12 @@ class _SolarUsageScreenState extends State<SolarUsageScreen> {
         } else {
           context.go('/heating-fuel');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.monthlySolarKwh = 71.25; 
+        profile.solarUsageSkipped = true;
+        profile.update();
+        context.go('/heating-fuel');
       },
       answerContent: Column(
         children: [
@@ -2821,6 +2849,12 @@ class _HeatingFuelScreenState extends State<HeatingFuelScreen> {
           context.go('/hob-type');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.fuelType = 'natural_gas';
+        profile.fuelTypeAnswered = true;
+        profile.update();
+        context.go('/hob-type');
+      },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
@@ -2884,6 +2918,12 @@ class _HobTypeScreenState extends State<HobTypeScreen> {
           context.go('/combined-billing');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.hobType = 'gas';
+        profile.hobTypeAnswered = true;
+        profile.update();
+        context.go('/combined-billing');
+      },
       answerContent: buildTwoOptionBoxes(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
@@ -2936,6 +2976,11 @@ class _CombinedBillingScreenState extends State<CombinedBillingScreen> {
             context.go('/gas-spend');
           }
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.combinedBilling = true;
+        profile.update();
+        context.go('/gas-elec-spend');
       },
       answerContent: buildYesNoOptions(
         selected: _selected,
@@ -2990,6 +3035,13 @@ class _CombinedSpendScreenState extends State<CombinedSpendScreen> {
         } else {
           context.go('/water-spend');
         }
+      },
+      // for these questions using yearly on skip variables to save renaming issues
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.monthlyCombinedSpend = 1862.66; // a reasonable flat average monthly figure
+        profile.combinedSpendSkipped = true;
+        profile.update();
+        context.go('/water-spend');
       },
       answerContent: Column(
         children: [
@@ -3084,6 +3136,12 @@ class _GasSpendScreenState extends State<GasSpendScreen> {
           context.go('/elec-spend');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.monthlyGasSpend = 948.95; 
+        profile.gasSpendSkipped = true;
+        profile.update();
+        context.go('/elec-spend');
+      },
       answerContent: Column(
         children: [
           Container(
@@ -3176,6 +3234,12 @@ class _ElecSpendScreenState extends State<ElecSpendScreen> {
         } else {
           context.go('/water-spend');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.monthlyElecSpend = 913.71; 
+        profile.elecSpendSkipped = true;
+        profile.update();
+        context.go('/water-spend');
       },
       answerContent: Column(
         children: [
@@ -3270,6 +3334,11 @@ class _WaterSpendScreenState extends State<WaterSpendScreen> {
           context.go('/tariff-type');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.monthlyWaterSpend = 50.25;
+        profile.update();
+        context.go('/tariff-type');
+      },
       answerContent: Column(
         children: [
           Container(
@@ -3356,6 +3425,12 @@ class _TariffTypeScreenState extends State<TariffTypeScreen> {
         } else {
           context.go('/transport-intro');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.tariff = 'standard';
+        profile.tariffAnswered = true;
+        profile.update();
+        context.go('/transport-intro');
       },
       answerContent: buildYesNoOptions(
         selected: _selected,
@@ -3690,6 +3765,10 @@ class _CarFuelScreenState extends State<CarFuelScreen> {
         profile.currentCarFuel = _selected!;
         context.go('/weekly-mileage');
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.currentCarFuel = 'petrol';
+        context.go('/weekly-mileage');
+      },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
@@ -3772,6 +3851,18 @@ class _WeeklyMileageScreenState extends State<WeeklyMileageScreen> {
         } else {
           context.go('/car-size');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.cars.add({
+          'size': profile.currentCarSize,
+          'fuel': profile.currentCarFuel,
+          'mileage': 106, 
+        });
+        profile.currentCarSize = null;
+        profile.currentCarFuel = null;
+        profile.currentCarMileage = null;
+        profile.update();
+        context.go('/car-size');
       },
       answerContent: Column(
         children: [
@@ -3869,6 +3960,12 @@ class _BusSpendScreenState extends State<BusSpendScreen> {
           context.go('/train-spend');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.monthlyBusSpend = 0;
+        profile.busSpendAnswered = true;
+        profile.update();
+        context.go('/train-spend');
+      },
       answerContent: Column(
         children: [
           Container(
@@ -3964,6 +4061,12 @@ class _TrainSpendScreenState extends State<TrainSpendScreen> {
         } else {
           context.go('/flights-intro');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.monthlyTrainSpend = 0;
+        profile.trainSpendAnswered = true;
+        profile.update();
+        context.go('/flights-intro');
       },
       answerContent: Column(
         children: [
@@ -4203,6 +4306,35 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
     _fetchLiveTotal();
   }
 
+  void _skipTripDetails() {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    final tripData = {
+      'country': _selectedCountry,
+      'nights': int.tryParse(_nightsController.text) ?? 7,
+      'accommodation': 'hotel',
+      'passengers': profile.numPeople ?? 1,
+      'seat': 'economy',
+    };
+    if (_editingIndex != null) {
+      profile.flights[_editingIndex!] = tripData;
+    } else {
+      profile.flights.add(tripData);
+    }
+    profile.update();
+    _controller.enableAutoRotate = true;
+    _controller.setZoom(1.5);
+    setState(() {
+      _step = _TripStep.none;
+      _selectedCountry = null;
+      _nightsController.clear();
+      _selectedAccommodation = null;
+      _selectedPeople = null;
+      _editingIndex = null;
+      _selectedSeat = null;
+    });
+    _fetchLiveTotal();
+  }
+
   void _editTrip(int index) {
     final profile = Provider.of<ProfileStore>(context, listen: false);
     final trip = profile.flights[index];
@@ -4357,6 +4489,11 @@ class _FlightsGlobeScreenState extends State<FlightsGlobeScreen> {
                 onPressed: _hasNights ? () => setState(() => _step = _TripStep.accommodation) : null,
                 style: ElevatedButton.styleFrom(backgroundColor: kFlightsGreen),
                 child: Text('Next →', style: TextStyle(color: Colors.white)),
+              ),
+              SizedBox(height: 8),
+              TextButton(
+                onPressed: _skipTripDetails,
+                child: Text('Skip remaining details', style: TextStyle(color: Colors.white70, fontSize: 13)),
               ),
             ],
           ),
@@ -4751,6 +4888,11 @@ class _HotelNightsScreenState extends State<HotelNightsScreen> {
           context.go('/airbnb-nights');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.hotelNights = 9;
+        profile.update();
+        context.go('/airbnb-nights');
+      },
       answerContent: Column(
         children: [
           Container(
@@ -4845,6 +4987,11 @@ class _AirbnbNightsScreenState extends State<AirbnbNightsScreen> {
         } else {
           context.go('/pets-intro');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.airbnbNights = 9;
+        profile.update();
+        context.go('/pets-intro');
       },
       answerContent: Column(
         children: [
@@ -5206,7 +5353,7 @@ class _RMDaysScreenState extends State<RMDaysScreen> {
 
     return QuizFrame(
       progress: 0.84375,
-      question: 'How many days a week do you eat red meat?',
+      question: 'How many meals a week do you eat containing red meat?',
       subheading: '(e.g. beef or pork)',
       answered: _hasValue,
       backRoute: '/diet-intro',
@@ -5220,6 +5367,11 @@ class _RMDaysScreenState extends State<RMDaysScreen> {
         } else {
           context.go('/wm-days');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.rmDays = 3;
+        profile.update();
+        context.go('/wm-days');
       },
       answerContent: Column(
         children: [
@@ -5301,7 +5453,7 @@ class _WMDaysScreenState extends State<WMDaysScreen> {
 
     return QuizFrame(
       progress: 0.875,
-      question: 'How many days a week do you eat white meat?',
+      question: 'How many meals a week do you eat containing white meat?',
       subheading: '(e.g. chicken or fish)',
       answered: _hasValue,
       backRoute: '/rm-spend',
@@ -5315,6 +5467,11 @@ class _WMDaysScreenState extends State<WMDaysScreen> {
         } else {
           context.go('/weekly-shop');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.wmDays = 2;
+        profile.update();
+        context.go('/weekly-shop');
       },
       answerContent: Column(
         children: [
@@ -5410,6 +5567,11 @@ class _WeeklyShopScreenState extends State<WeeklyShopScreen> {
           context.go('/waste');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.nonMeatSpend = 77;
+        profile.update();
+        context.go('/waste');
+      },
       answerContent: Column(
         children: [
           Container(
@@ -5498,6 +5660,12 @@ class _WasteScreenState extends State<WasteScreen> {
           context.go('/food-waste');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.wasteAction = 'recycle';
+        profile.wasteAnswered = true;
+        profile.update();
+        context.go('/food-waste');
+      },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
@@ -5560,6 +5728,12 @@ class _FoodWasteScreenState extends State<FoodWasteScreen> {
         } else {
           context.go('/spending-intro');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.foodWasteAction = 'bin';
+        profile.foodWasteAnswered = true;
+        profile.update();
+        context.go('/spending-intro');
       },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
@@ -6097,7 +6271,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
               builder: (context) {
                 final isMobile = MediaQuery.of(context).size.width < 480;
                 return Positioned(
-                  top: isMobile ? 8 : -23,
+                  top: isMobile ? 130 : -80,
                   right: isMobile ? -10 : -20,
                   child: ComparisonBadge(stats: _getComparisonStats(total, treeAmount)),
                 );
@@ -6105,7 +6279,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
             ),
           ],
         ),
-        SizedBox(height: 24),
+        SizedBox(height: 40),
 
         // Breakdown
         Expanded(
@@ -6547,6 +6721,12 @@ class _PropertyTypeScreenState extends State<PropertyTypeScreen> {
           context.go('/wall-type');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.propertyType = 'semi_detached';
+        profile.propertyTypeAnswered = true;
+        profile.update();
+        context.go('/wall-type');
+      },
       answerContent: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -6601,6 +6781,12 @@ class _WallTypeScreenState extends State<WallTypeScreen> {
           context.go('/boiler-age');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.wallType = 'cavity';
+        profile.wallTypeAnswered = true;
+        profile.update();
+        context.go('/boiler-age');
+      },
       answerContent: buildYesNoOptions(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
@@ -6650,6 +6836,12 @@ class _BoilerAgeScreenState extends State<BoilerAgeScreen> {
         } else {
           context.go('/lightbulbs');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.boilerAge = 'unsure';
+        profile.boilerAnswered = true;
+        profile.update();
+        context.go('/lightbulbs');
       },
       answerContent: SizedBox(
         height: 420,
@@ -6808,6 +7000,13 @@ class _LightbulbsScreenState extends State<LightbulbsScreen> {
           context.go('/shower-type');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.incandescentBulbs = 0;
+        profile.cflBulbs = 20;
+        profile.ledBulbs = 5;
+        profile.update();
+        context.go('/shower-type');
+      },
       answerContent: Column(
         children: _bulbTypes.map((bulb) {
           final count = _getCount(bulb['key'] as String);
@@ -6893,6 +7092,12 @@ class _ShowerTypeScreenState extends State<ShowerTypeScreen> {
         } else {
           context.go('/loft-insulation');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.showerType = 'electric_shower';
+        profile.showerTypeAnswered = true;
+        profile.update();
+        context.go('/loft-insulation');
       },
       answerContent: buildYesNoOptions(
         selected: _selected,
@@ -7151,6 +7356,11 @@ class _ShowerTimeScreenState extends State<ShowerTimeScreen> {
           context.go('/radiator-bleeding');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.showerTime = 7;
+        profile.update();
+        context.go('/radiator-bleeding');
+      },
       answerContent: Column(
         children: [
           Container(
@@ -7235,6 +7445,12 @@ class _RadiatorBleedingScreenState extends State<RadiatorBleedingScreen> {
           context.go('/washing-amount');
         }
       },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.radiatorBleeding = 'never';
+        profile.radiatorBleedingAnswered = true;
+        profile.update();
+        context.go('/washing-amount');
+      },
       answerContent: buildSingleSelectOptions(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
@@ -7301,6 +7517,11 @@ class _WashingAmountScreenState extends State<WashingAmountScreen> {
         } else {
           context.go('/washing-temperature');
         }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.washingFrequency = 2;
+        profile.update();
+        context.go('/washing-temperature');
       },
       answerContent: Column(
         children: [
@@ -7385,6 +7606,12 @@ class _WashingTemperatureScreenState extends State<WashingTemperatureScreen> {
         } else {
           context.go('/homeowner');
         }
+      },
+      nSkip: profile.returningFromEdit ? null : () {
+        profile.washingTemperature = '40';
+        profile.washingTemperatureAnswered = true;
+        profile.update();
+        context.go('/homeowner');
       },
       answerContent: buildSingleSelectOptions(
         selected: _selected,

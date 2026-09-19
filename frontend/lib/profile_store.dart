@@ -20,11 +20,15 @@ class ProfileStore extends ChangeNotifier {
   bool fuelTypeAnswered = false;
   double monthlyElecSpend = 0;
   double monthlySolarKwh = 0;
+  bool solarUsageSkipped = false;
   bool solarPanelsAnswered = false;
   String tariff = 'standard';
   bool tariffAnswered = false;
   double monthlyWaterSpend = 0;
   bool? combinedBilling;
+  bool combinedSpendSkipped = false;
+  bool gasSpendSkipped = false;
+  bool elecSpendSkipped = false;
   double monthlyCombinedSpend = 0;
   int billingMonth = DateTime.now().month == 1 ? 12 : DateTime.now().month - 1;
 
@@ -194,6 +198,10 @@ class ProfileStore extends ChangeNotifier {
       'uses_per_week':            washingFrequency,
       'washing_temperature':      washingTemperature,
       'homeowner':                homeowner,
+      'solar_usage_skipped':      solarUsageSkipped,
+      'combined_spend_skipped':   combinedSpendSkipped,
+      'gas_spend_skipped':        gasSpendSkipped,
+      'elec_spend_skipped':       elecSpendSkipped,
     };
   }
 
