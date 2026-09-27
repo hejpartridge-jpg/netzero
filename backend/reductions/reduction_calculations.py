@@ -282,16 +282,28 @@ def economy_not_business_co2(global_state: dict, adjusted_state: dict, co2_state
     new_co2["total_co2"] = beginning_co2 - reduction
     return new_global, new_adjusted, reduction, new_co2
 
-# 1 Less Car Journey
+# 1 Less Car Journey - doing the reduction from the most used car
 def less_car_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
     beginning_co2 = co2_state["total_co2"]
     new_co2 = co2_state.copy()
-    new_global, new_adjusted = less_car_apply(global_state, adjusted_state, profile)
-    co2_before = calculate_total_emissions(adjusted_state)["total_kg_co2e"]
-    co2_after = calculate_total_emissions(new_adjusted)["total_kg_co2e"]      
-    reduction = co2_before - co2_after
+
+    cars = global_state.get("cars", [])
+    if not cars:
+        return global_state, adjusted_state, 0, new_co2
+
+    most_used_car = max(cars, key=lambda c: c.get("mileage", 0))
+    fuel = most_used_car.get("fuel")
+    size = most_used_car.get("size")
+    fuel_dict = CAR_FACTORS.get(fuel)
+    if fuel_dict is None:
+        raise ValueError(f"Unknown car fuel type: '{fuel}'")
+    factor = fuel_dict.get(size)
+    if factor is None:
+        raise ValueError(f"Unknown car size: '{size}' for fuel type '{fuel}'")
+
+    reduction = 2 * factor
     new_co2["total_co2"] = beginning_co2 - reduction
-    return new_global, new_adjusted, reduction, new_co2
+    return global_state, adjusted_state, reduction, new_co2
 
 # Composting
 def compost_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
@@ -317,25 +329,33 @@ def upcycle_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profi
 
 # One Less Red Meat Day
 def less_rm_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
-    beginning_co2 = co2_state["total_co2"]
+    num_people = global_state.get("num_people") or 0
+    factor = DIET_FACTORS.get("red_meat")
+
+    meat_saved_co2 = factor * num_people
+    meat_spend_saved = num_people * 1.038
+    replacement_co2 = meat_spend_saved * SPEND_FACTORS.get("food_non_meat")
+
+    reduction = meat_saved_co2 - replacement_co2
+
     new_co2 = co2_state.copy()
-    new_global, new_adjusted = less_rm_apply(global_state, adjusted_state, profile)
-    co2_before = calculate_total_emissions(adjusted_state)["total_kg_co2e"]
-    co2_after = calculate_total_emissions(new_adjusted)["total_kg_co2e"]      
-    reduction = co2_before - co2_after
-    new_co2["total_co2"] = beginning_co2 - reduction
-    return new_global, new_adjusted, reduction, new_co2
+    new_co2["total_co2"] = co2_state["total_co2"] - reduction
+    return global_state, adjusted_state, reduction, new_co2
 
 # One Less White Meat Day
 def less_wm_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
-    beginning_co2 = co2_state["total_co2"]
+    num_people = global_state.get("num_people") or 0
+    factor = DIET_FACTORS.get("non_red_meat")
+
+    meat_saved_co2 = factor * num_people
+    meat_spend_saved = num_people * 0.769
+    replacement_co2 = meat_spend_saved * SPEND_FACTORS.get("food_non_meat")
+
+    reduction = meat_saved_co2 - replacement_co2
+
     new_co2 = co2_state.copy()
-    new_global, new_adjusted = less_wm_apply(global_state, adjusted_state, profile)
-    co2_before = calculate_total_emissions(adjusted_state)["total_kg_co2e"]
-    co2_after = calculate_total_emissions(new_adjusted)["total_kg_co2e"]      
-    reduction = co2_before - co2_after
-    new_co2["total_co2"] = beginning_co2 - reduction
-    return new_global, new_adjusted, reduction, new_co2
+    new_co2["total_co2"] = co2_state["total_co2"] - reduction
+    return global_state, adjusted_state, reduction, new_co2
 
 # Vegan Pet Food
 def vegan_pets_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:

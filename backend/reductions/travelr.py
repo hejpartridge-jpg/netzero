@@ -22,6 +22,7 @@ def economy_not_business_apply(global_state: dict, adjusted_state: dict, profile
     ]
     return new_global, new_adjusted
 
+'''
 # 1 Less Car Journey
 def less_car_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_global = global_state.copy()
@@ -35,3 +36,4 @@ def less_car_apply(global_state: dict, adjusted_state: dict, profile: dict) -> t
         for car in adjusted_state.get("cars", [])
     ]
     return new_global, new_adjusted
+'''

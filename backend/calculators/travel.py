@@ -38,6 +38,7 @@ def calculate_car_emissions(cars: list) -> float:
         total_co2 += weekly_mileage * 52 * factor
     return total_co2
 
+
 # ── Flight emissions ──────────────────────────────────────────────────
 def calculate_flight_emissions(flights: list) -> float:
     total_co2 = 0

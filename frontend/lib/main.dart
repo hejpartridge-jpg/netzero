@@ -129,6 +129,7 @@ final _router = GoRouter(
     GoRoute(path: '/washing-temperature', builder: (context, state) => WashingTemperatureScreen()),
     GoRoute(path: '/homeowner',    builder: (context, state) => HomeownerScreen()),
     GoRoute(path: '/actions',      builder: (context, state) => ActionScreen()),
+    GoRoute(path: '/habits', builder: (context, state) => HabitsScreen()),
     GoRoute(path: '/completed-tasks', builder: (context, state) => CompletedTasksScreen()),
     GoRoute(path: '/placeholder', builder: (context, state) => PlaceholderScreen()),
   ],
@@ -2168,6 +2169,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       SizedBox(height: 24),
                       Align(
                         alignment: Alignment.centerLeft,
+                        child: Text('My Habits', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
+                      ),
+                      SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: kSurface,
+                          border: Border.all(color: kBorder),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${(_data?['habits'] as List?)?.length ?? 0} habit(s) in progress',
+                                style: TextStyle(color: kText),
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => context.go('/habits'),
+                              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                              child: Text('View →'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
                         child: Text('View Completed Tasks', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
                       ),
                       SizedBox(height: 12),
@@ -3435,9 +3466,9 @@ class _TariffTypeScreenState extends State<TariffTypeScreen> {
       answerContent: buildYesNoOptions(
         selected: _selected,
         onSelect: (value) => setState(() => _selected = value),
-        leftLabel: 'Green (PPA)',
+        leftLabel: 'Green (PPA-backed)',
         leftIcon: Icons.eco,
-        leftSubtitle: 'Power Purchase Agreement tariffs only, sourced directly from renewable sites (for example with Octopus Energy\'s green tariff)',
+        leftSubtitle: 'Power Purchase Agreement backed tariffs only, sourced directly from renewable sites (for example with Octopus Energy\'s green tariff)',
         rightLabel: 'Standard',
         rightIcon: Icons.bolt,
         rightSubtitle: 'A regular electricity tariff from the general grid mix. Don\'t know? Select this!',
@@ -7607,7 +7638,7 @@ class _WashingTemperatureScreenState extends State<WashingTemperatureScreen> {
           context.go('/homeowner');
         }
       },
-      nSkip: profile.returningFromEdit ? null : () {
+      onSkip: profile.returningFromEdit ? null : () {
         profile.washingTemperature = '40';
         profile.washingTemperatureAnswered = true;
         profile.update();
@@ -8120,8 +8151,12 @@ class _ActionScreenState extends State<ActionScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
     final currentCard = _queue.first;
     final currentName = currentCard['name'] as String;
+    final isHabit = currentCard['is_habit'] == true;
+
     profile.completedActions = [...profile.completedActions, currentName];
-    profile.completedActionsData = [...profile.completedActionsData, currentCard];
+    if (!isHabit) {
+      profile.completedActionsData = [...profile.completedActionsData, currentCard];
+    }
     profile.update();
     await _getActions();
   }
@@ -8135,6 +8170,153 @@ class _ActionScreenState extends State<ActionScreen> {
     await _getActions();
   }
 }
+
+
+// ── Habits Screen ─────────────────────────────────────────────────────────
+class HabitsScreen extends StatefulWidget {
+  @override
+  _HabitsScreenState createState() => _HabitsScreenState();
+}
+
+class _HabitsScreenState extends State<HabitsScreen> {
+  bool _loading = true;
+  Map<String, dynamic>? _data;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHabits();
+  }
+
+  Future<void> _fetchHabits() async {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    try {
+      final response = await http.post(
+        Uri.parse('https://netzero-production.up.railway.app/recommendations'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'profile': profile.toProfile(),
+          'completed_actions': profile.completedActions,
+          'dismissed_actions': profile.dismissedActions.map((a) => a['name']).toList(),
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() {
+          _data = jsonDecode(response.body);
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _doItAgain(String name) async {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    profile.completedActions = [...profile.completedActions, name];
+    profile.update();
+    await _fetchHabits();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final habits = (_data?['habits'] as List?) ?? [];
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: kText),
+          onPressed: () => context.go('/dashboard'),
+        ),
+        actions: [_authBarButton(context, hideMyProfile: true), SizedBox(width: 8)],
+      ),
+      body: SafeArea(
+        child: screenWrapper(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: _loading
+                ? Center(child: CircularProgressIndicator(color: kPrimary))
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('My Habits', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText)),
+                      SizedBox(height: 8),
+                      Text('Keep it up — every repeat adds up.', style: TextStyle(color: kTextSubtle, fontSize: 13)),
+                      SizedBox(height: 24),
+                      if (habits.isEmpty)
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              'Nothing here yet — complete a repeatable action from your tasks to start building a habit.',
+                              style: TextStyle(color: kTextSubtle),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: habits.length,
+                            itemBuilder: (context, index) {
+                              final habit = habits[index] as Map<String, dynamic>;
+                              final name = habit['name'] as String;
+                              final label = habit['label'] as String;
+                              final reduction = (habit['reduction_kg_co2e'] as num).toDouble();
+                              final timesCompleted = habit['times_completed'] as int? ?? 0;
+                              final cardColor = actionCardColors[name.hashCode.abs() % actionCardColors.length];
+
+                              return Container(
+                                margin: EdgeInsets.only(bottom: 12),
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: kSurface,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: cardColor, width: 2),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: kText, fontSize: 14)),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            '${reduction.toStringAsFixed(2)} kg CO₂e • done $timesCompleted time${timesCompleted == 1 ? '' : 's'}',
+                                            style: TextStyle(fontSize: 12, color: kTextSubtle),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    ElevatedButton(
+                                      onPressed: () => _doItAgain(name),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: cardColor,
+                                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                        shape: StadiumBorder(),
+                                      ),
+                                      child: Text('Done it!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 // ── Placeholder Screen ────────────────────────────────────────────────────
 class PlaceholderScreen extends StatelessWidget {

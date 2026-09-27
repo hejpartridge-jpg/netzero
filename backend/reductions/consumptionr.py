@@ -16,6 +16,7 @@ def upcycle_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tu
     new_adjusted["waste_action"] = "upcycle"
     return new_global, new_adjusted
 
+'''
 # One Less Red Meat Day
 def less_rm_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
     new_global = global_state.copy()
@@ -53,6 +54,7 @@ def less_wm_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tu
         new_adjusted["non_meat_spend"] = new_spend
         new_adjusted["wm_days"] = new_wm_days
     return new_global, new_adjusted
+'''
 
 # Vegan Pet Food
 def vegan_pets_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:

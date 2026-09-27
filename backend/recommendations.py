@@ -61,11 +61,12 @@ ACTIONS = [
     },
     {
         "name": "shorter_shower",
-        "label": "Take 2 minutes less in the shower",
+        "label": lambda p: f"Spend {int(p.get('shower_time', 7)) - 2} minutes in the shower instead of {int(p.get('shower_time', 7))}",
         "co2_fn": shorter_shower_co2,
         "cost": "free",
         "difficulty": "easy",
-        "eligible": lambda p: True,
+        "eligible": lambda p: p.get("shower_time", 0) > 4,
+        "is_habit": True,
     },
     {
         "name": "reduce_wm_temperature",
@@ -74,14 +75,16 @@ ACTIONS = [
         "cost": "free",
         "difficulty": "easy",
         "eligible": lambda p: p.get("washing_temperature") != "30",
+        "is_habit": True,
     },
     {
         "name": "less_car",
-        "label": "Take one less car journey a week",
+        "label": "Walk, cycle or use an e-scooter instead of taking the car for a short trip",
         "co2_fn": less_car_co2,
         "cost": "free",
         "difficulty": "easy",
-        "eligible": lambda p: p.get("weekly_mileage", 0) > 0,
+        "eligible": lambda p: any(car.get("mileage", 0) > 2 for car in p.get("cars", [])),
+        "is_habit": True,
     },
     {
         "name": "economy_not_business",
@@ -113,19 +116,21 @@ ACTIONS = [
     },
     {
         "name": "less_red_meat",
-        "label": "Eat one less red meat day a week",
+        "label": "Eat one less red meat meal",
         "co2_fn": less_rm_co2,
         "cost": "free",
         "difficulty": "medium",
         "eligible": lambda p: p.get("rm_days", 0) > 1,
+        "is_habit": True,
     },
     {
         "name": "less_white_meat",
-        "label": "Eat one less white meat day a week",
+        "label": "Eat one less white meat meal",
         "co2_fn": less_wm_co2,
         "cost": "free",
         "difficulty": "medium",
         "eligible": lambda p: p.get("wm_days", 0) > 1,
+        "is_habit": True,
     },
     {
         "name": "bleed_radiators",
@@ -288,32 +293,13 @@ _ACTIONS_BY_NAME = {a["name"]: a for a in ACTIONS}
 
 
 def get_recommendations(profile: dict, completed_actions: list = None, dismissed_actions: list = None) -> dict:
-    """
-    Returns:
-    {
-        "starting_total_kg_co2e": ...,   # footprint before anything was done
-        "current_total_kg_co2e": ...,    # footprint right now, after completed actions
-        "total_saved_kg_co2e": ...,      # starting - current
-        "recommendations": [
-            {"name", "label", "cost", "difficulty", "reduction_kg_co2e"},
-            ...  # sorted: tier (free < cheap < expensive) first, then reduction descending
-        ]
-    }
-
-    `completed_actions` is a list of action `name`s (matching ACTIONS' "name"
-    field) the user has already marked done, in the order they did them.
-    Each completed action is replayed against the state in that order to
-    build the CURRENT state - so remaining actions' reductions correctly
-    reflect what's already been done, and completed actions are excluded
-    from the returned recommendations list.
-    """
     completed_actions = completed_actions or []
     dismissed_actions = dismissed_actions or []
 
     global_state, adjusted_state, co2_state = build_initial_state(profile)
     starting_total = co2_state["total_co2"]
 
-    # Replay completed actions in order to build current state.
+    # Replay every completion in order - habits can appear multiple times.
     for action_name in completed_actions:
         action = _ACTIONS_BY_NAME.get(action_name)
         if action is None:
@@ -326,18 +312,30 @@ def get_recommendations(profile: dict, completed_actions: list = None, dismissed
     current_total = co2_state["total_co2"]
     total_saved = starting_total - current_total
 
-    # Calculate remaining eligible (and not-yet-completed) actions against
-    # the CURRENT (post-replay) state, each independently - so two
-    # not-yet-done actions don't "double count" against each other, but
-    # both correctly reflect anything already completed.
+    def resolve_label(action, state):
+        label = action["label"]
+        return label(state) if callable(label) else label
+
     results = []
+    habits = []
+
     for action in ACTIONS:
-        if action["name"] in completed_actions:
+        is_habit = action.get("is_habit", False)
+        times_done = completed_actions.count(action["name"])
+
+        if not is_habit and action["name"] in completed_actions:
             continue
         if action["name"] in dismissed_actions:
             continue
-        if not action["eligible"](profile):
+        if not action["eligible"](adjusted_state if is_habit and times_done > 0 else profile):
             continue
+
+        if action["name"] == "shorter_shower" and times_done >= 365:
+            continue
+        if action["name"] == "reduce_wm_temperature":
+            max_washes = int((profile.get("uses_per_week") or 0) * 52)
+            if times_done >= max_washes:
+                continue
 
         try:
             _, new_adjusted, reduction, _ = action["co2_fn"](global_state, adjusted_state, co2_state, profile)
@@ -347,30 +345,41 @@ def get_recommendations(profile: dict, completed_actions: list = None, dismissed
 
         cost_before = calculate_total_annual_cost(adjusted_state)
         cost_after = calculate_total_annual_cost(new_adjusted)
-        
         car_cost_before = calculate_annual_car_cost(adjusted_state)
         car_cost_after = calculate_annual_car_cost(new_adjusted)
-        
         annual_savings = (cost_before - cost_after) + (car_cost_before - car_cost_after)
 
-        if reduction < 0.5:
-            continue
+        if is_habit:
+            decimals = 2
+        else:
+            decimals = 1
+            if reduction < 0.5:
+                continue
 
-        results.append({
+        entry = {
             "name": action["name"],
-            "label": action["label"],
+            "label": resolve_label(action, adjusted_state),
             "cost": action["cost"],
             "savings": round(annual_savings, 2),
             "savings_note": action.get("savings_note"),
             "difficulty": action["difficulty"],
-            "reduction_kg_co2e": round(reduction, 1),
-        })
+            "reduction_kg_co2e": round(reduction, decimals),
+            "times_completed": times_done,
+            "is_habit": is_habit,
+        }
+
+        if is_habit and times_done > 0:
+            habits.append(entry)
+        else:
+            results.append(entry)
 
     results.sort(key=lambda r: (_TIER_ORDER[r["cost"]], -r["reduction_kg_co2e"]))
+    habits.sort(key=lambda r: -r["reduction_kg_co2e"])
 
     return {
         "starting_total_kg_co2e": round(starting_total, 1),
         "current_total_kg_co2e": round(current_total, 1),
         "total_saved_kg_co2e": round(total_saved, 1),
         "recommendations": results,
+        "habits": habits,
     }

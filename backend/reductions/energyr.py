@@ -140,7 +140,7 @@ def reduce_wm_temperature_apply(global_state: dict, adjusted_state: dict, profil
     new_adjusted = adjusted_state.copy()
     uses_per_week = profile.get("uses_per_week")
     temperature = profile.get("washing_temperature")
-    washing_energy = uses_per_week * 52 * 1
+    washing_energy = 1
     if temperature == "40":
         reduction = washing_energy * 0.38
     else:
@@ -239,11 +239,11 @@ def shorter_shower_apply(global_state: dict, adjusted_state: dict, profile: dict
     num_people = global_state["num_people"]
     water_usage = global_state["annual_water_m3"]
     if global_state.get("shower_type") == "electric_shower":
-        water_saving = num_people * 365 * 0.012
+        water_saving = num_people * 0.012
         new_global["annual_water_m3"] = max(0, water_usage - water_saving)
         new_adjusted["annual_water_m3"] = max(0, water_usage - water_saving)
     else:
-        water_saving = num_people * 365 * 0.03
+        water_saving = num_people * 0.03
         new_global["annual_water_m3"] = max(0, water_usage - water_saving)
         new_adjusted["annual_water_m3"] = max(0, water_usage - water_saving)
     heat_reduction = water_saving * 35.1
