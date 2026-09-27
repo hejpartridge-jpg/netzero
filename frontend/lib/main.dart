@@ -48,7 +48,9 @@ final _router = GoRouter(
       !location.startsWith('/login') &&
       !location.startsWith('/dashboard') &&
       !location.startsWith('/answers') &&
-      !location.startsWith('/info')) {
+      !location.startsWith('/info') &&
+      !location.startsWith('/habits') &&
+      !location.startsWith('/completed-tasks')) {
     profileStore.lastRoute = location;
     profileStore.saveLastRouteOnly();
   }

@@ -264,7 +264,7 @@ def water_saving_shower_apply(global_state: dict, adjusted_state: dict, profile:
     new_adjusted = adjusted_state.copy()
     num_people = global_state["num_people"]
     water_usage = global_state["annual_water_m3"]
-    time = profile.get("shower_time")
+    time = profile.get("shower_time") or 0
     shower_usage = time * num_people * 365 * 0.015
     new_shower_usage = shower_usage * 0.48
     reduction = shower_usage - new_shower_usage
