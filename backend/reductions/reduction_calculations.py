@@ -27,14 +27,11 @@ from reductions.energyr import (
 from reductions.travelr import (
     electric_car_apply,
     economy_not_business_apply,
-    less_car_apply,
 )
 
 from reductions.consumptionr import (
     compost_apply,
     upcycle_apply,
-    less_rm_apply,
-    less_wm_apply,
     vegan_pets_apply,
 )
 

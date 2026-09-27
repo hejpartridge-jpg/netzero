@@ -2077,156 +2077,158 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: screenWrapper(
           child: _loading
               ? Center(child: CircularProgressIndicator(color: kPrimary))
-              : Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Text('My Dashboard', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText)),
-                      SizedBox(height: 30),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            height: 160,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
+              : SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        Text('My Dashboard', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: kText)),
+                        SizedBox(height: 30),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              height: 160,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  SizedBox(height: 12),
+                                  Consumer<ProfileStore>(
+                                    builder: (context, profile, child) {
+                                      return GestureDetector(
+                                        onTap: () => showAvatarPicker(context, profile),
+                                        child: buildAvatarIcon(profile, radius: 48),
+                                      );
+                                    },
+                                  ),
+                                  SizedBox(height: 10),
+                                  TextButton(
+                                    onPressed: () => context.go('/answers'),
+                                    child: Text('See my answers', style: TextStyle(color: kTextSubtle, fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ),
+                                  SizedBox(height: 12),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 75),
+                            Co2ProgressRing(
+                              startingTotal: (_data?['starting_total_kg_co2e'] as num?)?.toDouble() ?? 0,
+                              currentTotal: (_data?['current_total_kg_co2e'] as num?)?.toDouble() ?? 0,
+                              size: 160,
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 32),
+                        SizedBox(height: 32),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('  My Tasks', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
+                        ),
+                        SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: kSurface,
+                            border: Border.all(color: kBorder),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (!phase1Done) ...[
+                                Text('Calculate your CO2 emissions', style: TextStyle(color: kText)),
                                 SizedBox(height: 12),
-                                Consumer<ProfileStore>(
-                                  builder: (context, profile, child) {
-                                    return GestureDetector(
-                                      onTap: () => showAvatarPicker(context, profile),
-                                      child: buildAvatarIcon(profile, radius: 48),
-                                    );
-                                  },
+                                ElevatedButton(
+                                  onPressed: () => context.go(profile.lastRoute ?? '/energy-intro'),
+                                  style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                  child: Text('Get started →'),
                                 ),
-                                SizedBox(height: 10),
-                                TextButton(
-                                  onPressed: () => context.go('/answers'),
-                                  child: Text('See my answers', style: TextStyle(color: kTextSubtle, fontSize: 16, fontWeight: FontWeight.bold)),
-                                ),
+                              ] else if (!quizDone) ...[
+                                Text('Complete your habits quiz', style: TextStyle(color: kText)),
                                 SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: () => context.go('/quiz'),
+                                  style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                  child: Text('Continue quiz →'),
+                                ),
+                              ] else if (_data != null && (_data!['recommendations'] as List).isNotEmpty) ...[
+                                Text((_data!['recommendations'] as List).first['label'] as String, style: TextStyle(color: kText)),
+                                SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: () => context.go('/actions'),
+                                  style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                  child: Text('View action →'),
+                                ),
+                              ] else ...[
+                                Text('You\'ve completed everything! 🎉', style: TextStyle(color: kText)),
                               ],
-                            ),
-                          ),
-                          SizedBox(width: 75),
-                          Co2ProgressRing(
-                            startingTotal: (_data?['starting_total_kg_co2e'] as num?)?.toDouble() ?? 0,
-                            currentTotal: (_data?['current_total_kg_co2e'] as num?)?.toDouble() ?? 0,
-                            size: 160,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 32),
-                      SizedBox(height: 32),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('  My Tasks', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
-                      ),
-                      SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: kSurface,
-                          border: Border.all(color: kBorder),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!phase1Done) ...[
-                              Text('Calculate your CO2 emissions', style: TextStyle(color: kText)),
-                              SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: () => context.go(profile.lastRoute ?? '/energy-intro'),
-                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                                child: Text('Get started →'),
-                              ),
-                            ] else if (!quizDone) ...[
-                              Text('Complete your habits quiz', style: TextStyle(color: kText)),
-                              SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: () => context.go('/quiz'),
-                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                                child: Text('Continue quiz →'),
-                              ),
-                            ] else if (_data != null && (_data!['recommendations'] as List).isNotEmpty) ...[
-                              Text((_data!['recommendations'] as List).first['label'] as String, style: TextStyle(color: kText)),
-                              SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: () => context.go('/actions'),
-                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                                child: Text('View action →'),
-                              ),
-                            ] else ...[
-                              Text('You\'ve completed everything! 🎉', style: TextStyle(color: kText)),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 24),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('My Habits', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
-                      ),
-                      SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: kSurface,
-                          border: Border.all(color: kBorder),
-                          borderRadius: BorderRadius.circular(16),
+                        SizedBox(height: 24),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('My Habits', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${(_data?['habits'] as List?)?.length ?? 0} habit(s) in progress',
-                                style: TextStyle(color: kText),
+                        SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: kSurface,
+                            border: Border.all(color: kBorder),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${(_data?['habits'] as List?)?.length ?? 0} habit(s) in progress',
+                                  style: TextStyle(color: kText),
+                                ),
                               ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => context.go('/habits'),
-                              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                              child: Text('View →'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 24),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('View Completed Tasks', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
-                      ),
-                      SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: kSurface,
-                          border: Border.all(color: kBorder),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${profile.completedActionsData.length} task(s) completed',
-                                style: TextStyle(color: kText),
+                              ElevatedButton(
+                                onPressed: () => context.go('/habits'),
+                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                child: Text('View →'),
                               ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => context.go('/completed-tasks'),
-                              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-                              child: Text('View →'),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 24),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('View Completed Tasks', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
+                        ),
+                        SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: kSurface,
+                            border: Border.all(color: kBorder),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${profile.completedActionsData.length} task(s) completed',
+                                  style: TextStyle(color: kText),
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => context.go('/completed-tasks'),
+                                style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+                                child: Text('View →'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
         ),
