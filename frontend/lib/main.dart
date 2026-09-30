@@ -7887,6 +7887,7 @@ class _ActionScreenState extends State<ActionScreen> {
     final savings = (card['savings'] as num).toDouble();
     final savingsNote = card['savings_note'] as String?;
     final difficulty = card['difficulty'] as String;
+    final isHabit = card['is_habit'] == true;
     final reduction = (card['reduction_kg_co2e'] as num).toDouble();
 
     final allActions = List<Map<String, dynamic>>.from(_actions!['recommendations']);
@@ -8007,10 +8008,10 @@ class _ActionScreenState extends State<ActionScreen> {
                   Column(
                     children: [
                       Text(
-                        '${reduction.toStringAsFixed(0)}',
+                        isHabit ? reduction.toStringAsFixed(2) : reduction.toStringAsFixed(0),
                         style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: cardColor),
                       ),
-                      Text('kg CO₂e/yr', style: TextStyle(fontSize: 11, color: kTextSubtle)),
+                      Text(isHabit ? 'kg CO₂e' : 'kg CO₂e/yr', style: TextStyle(fontSize: 11, color: kTextSubtle)),
                     ],
                   ),
                   Column(

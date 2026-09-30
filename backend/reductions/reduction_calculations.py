@@ -1,5 +1,5 @@
 from calculator import calculate_total_emissions
-from emission_factors import INSULATION_CO2_SAVING
+from emission_factors import INSULATION_CO2_SAVING, CAR_FACTORS
 
 from reductions.energyr import (
     renewable_tariff_apply,

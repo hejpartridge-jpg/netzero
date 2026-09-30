@@ -1,4 +1,4 @@
-
+from emission_factors import CAR_FACTORS
 
 # Electric Car
 def electric_car_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
