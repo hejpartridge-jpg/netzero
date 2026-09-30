@@ -1230,13 +1230,15 @@ class PetCard extends StatefulWidget {
 
 class _PetCardState extends State<PetCard> {
   late TextEditingController _nameController;
-  late TextEditingController _weightController;
+  late TextEditingController _wetWeightController;
+  late TextEditingController _dryWeightController;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.pet['name'] ?? '');
-    _weightController = TextEditingController(text: widget.pet['weight']?.toString() ?? '');
+    _wetWeightController = TextEditingController(text: widget.pet['wet_weight']?.toString() ?? '');
+    _dryWeightController = TextEditingController(text: widget.pet['dry_weight']?.toString() ?? '');
   }
 
   void _update(String key, dynamic value) {
@@ -1258,6 +1260,42 @@ class _PetCardState extends State<PetCard> {
           Expanded(child: field),
         ],
       ),
+    );
+  }
+
+  Widget _weightField(TextEditingController controller, String key) {
+    final hasText = controller.text.trim().isNotEmpty;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        if (!hasText)
+          Text('e.g. ', style: TextStyle(color: kTextSubtle, fontSize: 14)),
+        IntrinsicWidth(
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            style: TextStyle(color: kText, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: '100',
+              hintStyle: TextStyle(color: kTextSubtle, fontSize: 14),
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              filled: false,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (value) {
+              setState(() {});
+              _update(key, double.tryParse(value) ?? 0);
+            },
+          ),
+        ),
+        Text(' g', style: TextStyle(color: kTextSubtle, fontSize: 14)),
+      ],
     );
   }
 
@@ -1302,20 +1340,6 @@ class _PetCardState extends State<PetCard> {
             ),
           ),
           _row(
-            'Food Type: *',
-            HoverRevealField(
-              displayValue: pet['food'] ?? '',
-              editorBuilder: (context) => DropdownButton<String>(
-                value: pet['food'],
-                isExpanded: true,
-                underline: SizedBox(),
-                hint: Text('Select'),
-                items: ['dry', 'wet'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                onChanged: (value) => _update('food', value),
-              ),
-            ),
-          ),
-          _row(
             'Brand',
             HoverRevealField(
               displayValue: pet['brand'] ?? '',
@@ -1344,45 +1368,19 @@ class _PetCardState extends State<PetCard> {
             ),
           ),
           _row(
-            'Daily Weight\nof Food: *',
+            'Wet Food\nWeight: *',
             HoverRevealField(
-              displayValue: pet['weight'] != null ? '${pet['weight']} g' : '',
+              displayValue: pet['wet_weight'] != null ? '${pet['wet_weight']} g' : '',
               autoCloseOnChange: false,
-              editorBuilder: (context) {
-                final hasText = _weightController.text.trim().isNotEmpty;
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    if (!hasText)
-                      Text('e.g. ', style: TextStyle(color: kTextSubtle, fontSize: 14)),
-                    IntrinsicWidth(
-                      child: TextField(
-                        controller: _weightController,
-                        keyboardType: TextInputType.number,
-                        style: TextStyle(color: kText, fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: '200',
-                          hintStyle: TextStyle(color: kTextSubtle, fontSize: 14),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          filled: false,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: (value) {
-                          setState(() {});
-                          _update('weight', double.tryParse(value) ?? 0);
-                        },
-                      ),
-                    ),
-                    Text(' g', style: TextStyle(color: kTextSubtle, fontSize: 14)),
-                  ],
-                );
-              },
+              editorBuilder: (context) => _weightField(_wetWeightController, 'wet_weight'),
+            ),
+          ),
+          _row(
+            'Dry Food\nWeight: *',
+            HoverRevealField(
+              displayValue: pet['dry_weight'] != null ? '${pet['dry_weight']} g' : '',
+              autoCloseOnChange: false,
+              editorBuilder: (context) => _weightField(_dryWeightController, 'dry_weight'),
             ),
           ),
         ],
@@ -5157,7 +5155,10 @@ class PetsQuestionScreen extends StatefulWidget {
 class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
   List<Map<String, dynamic>> _pets = [];
   bool get _allPetsComplete {
-    return _pets.every((pet) => pet['food'] != null && pet['weight'] != null);
+    return _pets.every((pet) =>
+      (pet['wet_weight'] != null && pet['wet_weight'] > 0) ||
+      (pet['dry_weight'] != null && pet['dry_weight'] > 0)
+    );
   }
 
   @override
@@ -5218,10 +5219,10 @@ class _PetsQuestionScreenState extends State<PetsQuestionScreen> {
       _pets.add({
         'type': type,
         'name': '',
-        'food': null,
         'brand': 'standard',
         'diet': 'meaty',
-        'weight': null,
+        'wet_weight': null,
+        'dry_weight': null,
       });
     });
   }
@@ -5491,7 +5492,7 @@ class _WMDaysScreenState extends State<WMDaysScreen> {
       question: 'How many meals a week do you eat containing white meat?',
       subheading: '(e.g. chicken or fish)',
       answered: _hasValue,
-      backRoute: '/rm-spend',
+      backRoute: '/rm-days',
       accentColor: kDietOrange,
       onNext: () {
         profile.wmDays = int.tryParse(_controller.text) ?? 0;
@@ -6306,7 +6307,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
               builder: (context) {
                 final isMobile = MediaQuery.of(context).size.width < 480;
                 return Positioned(
-                  top: isMobile ? 130 : -80,
+                  top: isMobile ? 130 : 75,
                   right: isMobile ? -10 : -20,
                   child: ComparisonBadge(stats: _getComparisonStats(total, treeAmount)),
                 );

@@ -5,15 +5,18 @@ def calculate_pet_food_emissions(pets: list) -> float:
     total_co2 = 0
     for animal in pets:
         what = animal["type"]
-        food = animal["food"]
         brand = animal["brand"]
-        weight = animal["weight"]/1000
         diet = animal["diet"]
-        factor = PET_FACTORS.get(what, {}).get(food, {}).get(brand, {}).get(diet)
-        if factor is None:
-            # {} means to insert the value of the variable here
-            raise ValueError(f"Unknown combination: {what}/{food}/{brand}/{diet}")
-        co2 = factor * 365 * weight
+        wet_weight = (animal.get("wet_weight") or 0) / 1000
+        dry_weight = (animal.get("dry_weight") or 0) / 1000
+
+        wet_factor = PET_FACTORS.get(what, {}).get("wet", {}).get(brand, {}).get(diet)
+        dry_factor = PET_FACTORS.get(what, {}).get("dry", {}).get(brand, {}).get(diet)
+
+        if wet_factor is None or dry_factor is None:
+            raise ValueError(f"Unknown combination: {what}/{brand}/{diet}")
+
+        co2 = (wet_factor * 365 * wet_weight) + (dry_factor * 365 * dry_weight)
         total_co2 += co2
     return total_co2
 
