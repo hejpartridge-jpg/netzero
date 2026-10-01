@@ -428,4 +428,5 @@ def get_recommendations(profile: dict, completed_actions: list = None, dismissed
         "total_saved_kg_co2e": round(total_saved, 1),
         "recommendations": results,
         "habits": habits,
+        "what_else": what_else,
     }

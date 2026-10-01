@@ -239,7 +239,7 @@ class ProfileStore extends ChangeNotifier {
       'boiler_answered': boilerAnswered,
       'shower_type_answered': showerTypeAnswered,
       'have_dishwasher_answered': haveDishwasherAnswered,
-      'prerinse_answered': preRinseAnswered
+      'prerinse_answered': preRinseAnswered,
       'radiator_bleeding_answered': radiatorBleedingAnswered,
       'freezer_defrost_answered': freezerDefrostAnswered,
       'washing_temperature_answered': washingTemperatureAnswered,
@@ -338,11 +338,11 @@ class ProfileStore extends ChangeNotifier {
     doorDP = _b(data['door_draught_proofing'], doorDP);
     cylinderJacket = _b(data['water_cylinder_jacket'], cylinderJacket);
     radiatorPanels = _b(data['radiator_panels'], radiatorPanels);
-    haveDishwasher = _s(data['have_dishwasher'], haveDishwasher);
-    haveDishwasherAnswered = _s(data['have_dishwasher_answered'], haveDishwasherAnswered);
-    preRinse = _s(data['preRinse'], preRinse);
-    preRinseAnswered = _s(data['prerinse_answered'], preRinseAnswered);
-    dishwashingFrequency = _s(data['dishwashing_frequency'], dishwashingFrequency);
+    haveDishwasher = _b(data['have_dishwasher'], haveDishwasher);
+    haveDishwasherAnswered = data['have_dishwasher_answered'] as bool? ?? haveDishwasherAnswered;
+    preRinse = _b(data['preRinse'], preRinse);
+    preRinseAnswered = data['prerinse_answered'] as bool? ?? preRinseAnswered;
+    dishwashingFrequency = _i(data['dishwashing_frequency'], dishwashingFrequency);
     showerType = _s(data['shower_type'], showerType);
     savingShower = _b(data['water_saving_shower'], savingShower);
     showerTypeAnswered = data['shower_type_answered'] as bool? ?? showerTypeAnswered;
