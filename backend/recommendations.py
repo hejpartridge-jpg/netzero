@@ -1,6 +1,7 @@
 from reductions.initial_state import build_initial_state
 from calculator import calculate_total_emissions, calculate_total_annual_cost, calculate_annual_car_cost
 from reductions.reduction_calculations import (
+    calculate_conscious_clothes_savings,
     renewable_tariff_co2,
     solar_panels_co2,
     battery_storage_co2,
