@@ -164,6 +164,14 @@ def bleed_radiators_apply(global_state: dict, adjusted_state: dict, profile: dic
         new_adjusted["heating_baseline"] = max(0, adjusted_state["heating_baseline"] - reduction)
     return global_state, new_adjusted
 
+# Freezer Defrost
+def freezer_defrost_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
+    new_global = global_state.copy()
+    new_adjusted = adjusted_state.copy()
+    new_global["annual_electricity_kwh"] = max(0, global_state["annual_electricity_kwh"] - 58.05)
+    new_adjusted["annual_electricity_kwh"] = max(0, adjusted_state["annual_electricity_kwh"] - 58.05)
+    return new_global, new_adjusted
+
 
 # Water Cylinder Jacket
 def water_cylinder_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
@@ -257,6 +265,25 @@ def shorter_shower_apply(global_state: dict, adjusted_state: dict, profile: dict
         new_adjusted["water_heating_kwh"] = max(0, adjusted_state["water_heating_kwh"] - heat_reduction)
     return new_global, new_adjusted
 
+# No Prerinse
+def prerinse_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
+    new_global = global_state.copy()
+    new_adjusted = adjusted_state.copy()
+    new_global["annual_water_m3"] = max(0, global_state["annual_water_m3"] - 1.115)
+    new_adjusted["annual_water_m3"] = max(0, adjusted_state["annual_water_m3"] - 1.115)
+    return new_global, new_adjusted
+
+# Use Dishwasher Only When Full
+def full_dishwasher_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:
+    new_global = global_state.copy()
+    new_adjusted = adjusted_state.copy()
+    usage = profile.get("dishwashing_frequency") or 0
+    min_loads = usage * 0.85 #assuming average household fills a dishwasher to 85% capacity
+    saved_loads = usage - min_loads
+    water_reduction = 0.0125 * saved_loads * 52
+    new_global["annual_water_m3"] = max(0, global_state["annual_water_m3"] - water_reduction)
+    new_adjusted["annual_water_m3"] = max(0, adjusted_state["annual_water_m3"] - water_reduction)
+    return new_global, new_adjusted
 
 # Water Saving Shower Heads
 def water_saving_shower_apply(global_state: dict, adjusted_state: dict, profile: dict) -> tuple:

@@ -79,6 +79,7 @@ class ProfileStore extends ChangeNotifier {
   double monthlyCare = 0;
   double yearlyFurniture = 0;
   double monthlyServices = 0;
+  List<double> consciousClothesPurchases = [];
 
   // ── Energy Action Questions ───────────────────────────────────────────
   bool smartThermostat = false;
@@ -112,10 +113,20 @@ class ProfileStore extends ChangeNotifier {
   bool wallInsulation = false;
   bool floorInsulation = false;
 
+  // ── Dishwasher Questions ──────────────────────────────────────────────────────────
+  bool haveDishwasher = false;
+  bool haveDishwasherAnswered = false;
+  bool preRinse = false;
+  bool preRinseAnswered = false;
+  int dishwashingFrequency = 0;
+
+
   // ── Habit Questions ──────────────────────────────────────────────────────────
   int showerTime = 0;
   String radiatorBleeding = 'this_year';
+  String freezerDefrost = 'this_year';
   bool radiatorBleedingAnswered = false;
+  bool freezerDefrostAnswered = false;
   int washingFrequency = 0;
   String washingTemperature = '40';
   bool washingTemperatureAnswered = false;
@@ -164,6 +175,7 @@ class ProfileStore extends ChangeNotifier {
       'monthly_alcohol':          monthlyAlcohol,
       'monthly_tobacco':          monthlyTobacco,
       'monthly_clothes':          monthlyClothes,
+      'conscious_clothes_purchases': consciousClothesPurchases,
       'monthly_soap':             monthlySoap,
       'monthly_medicine':         monthlyMedicine,
       'yearly_electronics':       yearlyElectronics,
@@ -195,6 +207,10 @@ class ProfileStore extends ChangeNotifier {
       'floor_insulation':         floorInsulation,
       'shower_time':              showerTime,
       'last_radiator_bleed':      radiatorBleeding,
+      'last_freezer_defrost':     freezerDefrost,
+      'have_dishwasher':          haveDishwasher,
+      'preRinse':                 preRinse,
+      'dishwashing_frequency':    dishwashingFrequency,
       'uses_per_week':            washingFrequency,
       'washing_temperature':      washingTemperature,
       'homeowner':                homeowner,
@@ -222,7 +238,10 @@ class ProfileStore extends ChangeNotifier {
       'wall_type_answered': wallTypeAnswered,
       'boiler_answered': boilerAnswered,
       'shower_type_answered': showerTypeAnswered,
+      'have_dishwasher_answered': haveDishwasherAnswered,
+      'prerinse_answered': preRinseAnswered
       'radiator_bleeding_answered': radiatorBleedingAnswered,
+      'freezer_defrost_answered': freezerDefrostAnswered,
       'washing_temperature_answered': washingTemperatureAnswered,
       'homeowner_answered': homeownerAnswered,
       'last_route': lastRoute,
@@ -288,6 +307,10 @@ class ProfileStore extends ChangeNotifier {
     monthlyAlcohol = _d(data['monthly_alcohol'], monthlyAlcohol);
     monthlyTobacco = _d(data['monthly_tobacco'], monthlyTobacco);
     monthlyClothes = _d(data['monthly_clothes'], monthlyClothes);
+    if (data['conscious_clothes_purchases'] != null) {
+      consciousClothesPurchases = List<double>.from(
+          (data['conscious_clothes_purchases'] as List).map((e) => (e as num).toDouble()));
+    }
     monthlySoap = _d(data['monthly_soap'], monthlySoap);
     monthlyMedicine = _d(data['monthly_medicine'], monthlyMedicine);
     yearlyElectronics = _d(data['yearly_electronics'], yearlyElectronics);
@@ -315,6 +338,11 @@ class ProfileStore extends ChangeNotifier {
     doorDP = _b(data['door_draught_proofing'], doorDP);
     cylinderJacket = _b(data['water_cylinder_jacket'], cylinderJacket);
     radiatorPanels = _b(data['radiator_panels'], radiatorPanels);
+    haveDishwasher = _s(data['have_dishwasher'], haveDishwasher);
+    haveDishwasherAnswered = _s(data['have_dishwasher_answered'], haveDishwasherAnswered);
+    preRinse = _s(data['preRinse'], preRinse);
+    preRinseAnswered = _s(data['prerinse_answered'], preRinseAnswered);
+    dishwashingFrequency = _s(data['dishwashing_frequency'], dishwashingFrequency);
     showerType = _s(data['shower_type'], showerType);
     savingShower = _b(data['water_saving_shower'], savingShower);
     showerTypeAnswered = data['shower_type_answered'] as bool? ?? showerTypeAnswered;
@@ -325,6 +353,8 @@ class ProfileStore extends ChangeNotifier {
     showerTime = _i(data['shower_time'], showerTime);
     radiatorBleeding = _s(data['last_radiator_bleed'], radiatorBleeding);
     radiatorBleedingAnswered = data['radiator_bleeding_answered'] as bool? ?? radiatorBleedingAnswered;
+    freezerDefrost = _s(data['last_freezer_defrost'], freezerDefrost);
+    freezerDefrostAnswered = data['freezer_defrost_answered'] as bool? ?? freezerDefrostAnswered;
     washingFrequency = _i(data['uses_per_week'], washingFrequency);
     washingTemperature = _s(data['washing_temperature'], washingTemperature);
     washingTemperatureAnswered = data['washing_temperature_answered'] as bool? ?? washingTemperatureAnswered;

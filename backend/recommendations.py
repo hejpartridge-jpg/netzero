@@ -11,11 +11,14 @@ from reductions.reduction_calculations import (
     heat_pumps_co2,
     reduce_wm_temperature_co2,
     bleed_radiators_co2,
+    freezer_defrost_co2,
     water_cylinder_co2,
     radiator_panels_co2,
     window_dp_co2,
     door_dp_co2,
     shorter_shower_co2,
+    prerinse_co2,
+    full_dishwasher_co2,
     water_saving_shower_co2,
     loft_insulation_co2,
     cavity_insulation_co2,
@@ -29,6 +32,7 @@ from reductions.reduction_calculations import (
     less_rm_co2,
     less_wm_co2,
     vegan_pets_co2,
+    unsubscribe_mail_co2,
 )
 
 # cost: "free" | "cheap" | "expensive" - DEFAULTS, NOT RESEARCHED FIGURES.
@@ -141,6 +145,14 @@ ACTIONS = [
         "eligible": lambda p: p.get("last_radiator_bleed") != "this_year",
     },
     {
+        "name": "freezer_defrost",
+        "label": "Defrost your freezer",
+        "co2_fn": freezer_defrost_co2,
+        "cost": "free",
+        "difficulty": "medium",
+        "eligible": lambda p: p.get("last_freezer_defrost") != "this_year",
+    },
+    {
         "name": "LED_lighting",
         "label": "Switch remaining bulbs to LED",
         "co2_fn": LED_co2,
@@ -187,6 +199,22 @@ ACTIONS = [
         "cost": "cheap",
         "difficulty": "medium",
         "eligible": lambda p: not p.get("door_draught_proofing", False),
+    },
+    {
+        "name": "no_prerinse",
+        "label": "Stop prerinsing your dishes",
+        "co2_fn": prerinse_co2,
+        "cost": "free",
+        "difficulty": "easy",
+        "eligible": lambda p: p.get("have_dishwasher", False),
+    },
+    {
+        "name": "full_dishwasher",
+        "label": "Only run a dishwasher cycle when it is completely full",
+        "co2_fn": full_dishwasher_co2,
+        "cost": "free",
+        "difficulty": "easy",
+        "eligible": lambda p: p.get("have_dishwasher", False),
     },
     {
         "name": "water_saving_shower",
@@ -285,6 +313,15 @@ ACTIONS = [
         "difficulty": "medium",
         "eligible": lambda p: p.get("car_fuel") != "electric",
     },
+    {
+        "name": "unsubscribe_mail_list",
+        "label": "Unsubscribe from a mailing list",
+        "co2_fn": unsubscribe_mail_co2,
+        "cost": "free",
+        "difficulty": "easy",
+        "eligible": lambda p: True,
+        "is_habit": True,
+    },
 ]
 
 _TIER_ORDER = {"free": 0, "cheap": 1, "expensive": 2}
@@ -375,6 +412,14 @@ def get_recommendations(profile: dict, completed_actions: list = None, dismissed
 
     results.sort(key=lambda r: (_TIER_ORDER[r["cost"]], -r["reduction_kg_co2e"]))
     habits.sort(key=lambda r: -r["reduction_kg_co2e"])
+    
+    purchases = profile.get("conscious_clothes_purchases") or []
+    what_else = [{
+        "name": "conscious_clothes",
+        "label": "Buy secondhand or ethically sourced clothes",
+        "reduction_kg_co2e": round(calculate_conscious_clothes_savings(purchases), 2),
+        "times_completed": len(purchases),
+    }]
 
     return {
         "starting_total_kg_co2e": round(starting_total, 1),

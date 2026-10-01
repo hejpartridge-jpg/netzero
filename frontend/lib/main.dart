@@ -126,7 +126,11 @@ final _router = GoRouter(
     GoRoute(path: '/loft-insulation', builder: (context, state) => InsulationThicknessScreen()),
     GoRoute(path: '/insulation-types', builder: (context, state) => InsulationTypesScreen()),
     GoRoute(path: '/shower-time', builder: (context, state) => ShowerTimeScreen()),
+    GoRoute(path: '/dishwasher', builder: (context, state) => DishwasherScreen()),
+    GoRoute(path: '/dishwasher-amount', builder: (context, state) => DishwasherAmountScreen()),
+    GoRoute(path: '/prerinse', builder: (context, state) => PrerinseScreen()),
     GoRoute(path: '/radiator-bleeding', builder: (context, state) => RadiatorBleedingScreen()),
+    GoRoute(path: '/freezer-defrost', builder: (context, state) => FreezerDefrostScreen()),
     GoRoute(path: '/washing-amount', builder: (context, state) => WashingAmountScreen()),
     GoRoute(path: '/washing-temperature', builder: (context, state) => WashingTemperatureScreen()),
     GoRoute(path: '/homeowner',    builder: (context, state) => HomeownerScreen()),
@@ -2310,6 +2314,7 @@ class AnswersScreen extends StatelessWidget {
       'Habits': [
         {'label': 'Shower time', 'value': '${profile.showerTime} min', 'route': '/shower-time'},
         {'label': 'Radiator bleeding', 'value': profile.radiatorBleedingAnswered ? profile.radiatorBleeding : '—', 'route': '/radiator-bleeding'},
+        {'label': 'Freezer defrost', 'value': profile.freezerDefrostAnswered ? profile.freezerDefrost : '—', 'route': '/freezer-defrost'},
         {'label': 'Washing loads/week', 'value': '${profile.washingFrequency}', 'route': '/washing-amount'},
         {'label': 'Washing temperature', 'value': profile.washingTemperatureAnswered ? profile.washingTemperature : '—', 'route': '/washing-temperature'},
         {'label': 'Homeowner or renter', 'value': profile.homeownerAnswered ? profile.homeowner : '—', 'route': '/homeowner'},
@@ -6307,8 +6312,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
               builder: (context) {
                 final isMobile = MediaQuery.of(context).size.width < 480;
                 return Positioned(
-                  top: isMobile ? 130 : 75,
-                  right: isMobile ? -10 : -20,
+                  top: isMobile ? 130 : 80,
+                  right: isMobile ? -10 : -25,
                   child: ComparisonBadge(stats: _getComparisonStats(total, treeAmount)),
                 );
               },
@@ -6742,7 +6747,7 @@ class _PropertyTypeScreenState extends State<PropertyTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.0833,
+      progress: 0.0588,
       question: 'What type of property do you live in?',
       answered: _selected != null,
       backRoute: '/energyaction',
@@ -6802,7 +6807,7 @@ class _WallTypeScreenState extends State<WallTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.1666,
+      progress: 0.1176,
       question: 'What type of walls does your property have?',
       answered: _selected != null,
       backRoute: '/property-type',
@@ -6858,7 +6863,7 @@ class _BoilerAgeScreenState extends State<BoilerAgeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.2499,
+      progress: 0.1764,
       question: 'How old is your boiler?',
       answered: _selected != null,
       backRoute: '/wall-type',
@@ -7020,7 +7025,7 @@ class _LightbulbsScreenState extends State<LightbulbsScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.3332,
+      progress: 0.2352,
       question: 'How many of each type of bulb do you have?',
       answered: true,
       backRoute: '/boiler-age',
@@ -7114,7 +7119,7 @@ class _ShowerTypeScreenState extends State<ShowerTypeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.4165,
+      progress: 0.294,
       question: 'What type of shower do you have?',
       answered: _selected != null,
       backRoute: '/lightbulbs',
@@ -7174,7 +7179,7 @@ class _InsulationThicknessScreenState extends State<InsulationThicknessScreen> {
     final currentIndex = _selected != null ? _thicknessValues.indexOf(_selected!) : 1;
 
     return QuizFrame(
-      progress: 0.4998,
+      progress: 0.3528,
       question: 'How thick is your loft insulation?',
       answered: _selected != null,
       backRoute: '/shower-type',
@@ -7274,7 +7279,7 @@ class _InsulationTypesScreenState extends State<InsulationTypesScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.5831,
+      progress: 0.4116,
       question: 'Which of these do you already have?',
       subheading: 'This stops us recommending things you\'ve already done.',
       answered: true,
@@ -7378,7 +7383,7 @@ class _ShowerTimeScreenState extends State<ShowerTimeScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.6664,
+      progress: 0.4704,
       question: 'Average minutes spent in the shower, per person, per day?',
       answered: _hasValue,
       backRoute: '/insulation-types',
@@ -7389,13 +7394,13 @@ class _ShowerTimeScreenState extends State<ShowerTimeScreen> {
           profile.returningFromEdit = false;
           context.go('/answers');
         } else {
-          context.go('/radiator-bleeding');
+          context.go('/dishwasher');
         }
       },
       onSkip: profile.returningFromEdit ? null : () {
         profile.showerTime = 7;
         profile.update();
-        context.go('/radiator-bleeding');
+        context.go('/dishwasher');
       },
       answerContent: Column(
         children: [
@@ -7445,6 +7450,207 @@ class _ShowerTimeScreenState extends State<ShowerTimeScreen> {
   }
 }
 
+// ── Dishwasher Question ─────────────────────────────────────────────────
+class DishwasherScreen extends StatefulWidget {
+  @override
+  _DishwasherScreenState createState() => _DishwasherScreenState();
+}
+
+class _DishwasherScreenState extends State<DishwasherScreen> {
+  bool? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.haveDishwasherAnswered ? profile.haveDishwasher : null; 
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.5292,
+      question: 'Do you have a dishwasher?',
+      answered: _selected != null,
+      backRoute: '/shower-time',
+      onNext: () {
+        profile.haveDishwasher = _selected!;
+        profile.haveDishwasherAnswered = true;
+        profile.update();
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          if (_selected == true) {
+            context.go('/dishwasher-amount');
+          } else {
+            context.go('/radiator-bleeding');
+          }
+        }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.haveDishwasher = false;
+        profile.haveDishwasherAnswered = true;
+        profile.update();
+        context.go('/radiator-bleeding');
+      },
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+      ),
+    );
+  }
+}
+
+// ── Dishwashing Amount Question ────────────────────────────────────────────────
+class DishwasherAmountScreen extends StatefulWidget {
+  @override
+  _DishwasherAmountScreenState createState() => _DishwasherAmountScreenState();
+}
+
+class _DishwasherAmountScreenState extends State<DishwasherAmountScreen> {
+  final _controller = TextEditingController();
+  bool _hasValue = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    if (profile.dishwashingFrequency > 0) {
+      _controller.text = profile.dishwashingFrequency.toString();
+      _hasValue = true;
+    }
+    _controller.addListener(() {
+      setState(() => _hasValue = _controller.text.trim().isNotEmpty);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.588,
+      question: 'How many times do you use the dishwasher per week?',
+      answered: _hasValue,
+      backRoute: '/dishwasher',
+      onNext: () {
+        profile.dishwashingFrequency = int.tryParse(_controller.text) ?? 0;
+        profile.update();
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/prerinse');
+        }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.dishwashingFrequency = 7;
+        profile.update();
+        context.go('/prerinse');
+      },
+      answerContent: Column(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: kSurface,
+              border: Border.all(color: kBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                if (!_hasValue)
+                  Text('e.g.', style: TextStyle(fontSize: 20, color: kText)),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: '7',
+                      hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                Text(
+                  (int.tryParse(_controller.text) ?? 0) == 1 ? 'time' : 'times',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: _hasValue ? FontWeight.bold : FontWeight.normal,
+                    color: kText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// ── Prerinse Question ─────────────────────────────────────────────────
+class PrerinseScreen extends StatefulWidget {
+  @override
+  _PrerinseScreenState createState() => _PrerinseScreenState();
+}
+
+class _PrerinseScreenState extends State<PrerinseScreen> {
+  bool? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.preRinseAnswered ? profile.preRinse : null; 
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.6468,
+      question: 'Do you prerinse your dishes?',
+      answered: _selected != null,
+      backRoute: '/dishwasher-amount',
+      onNext: () {
+        profile.preRinse = _selected!;
+        profile.preRinseAnswered = true;
+        profile.update();
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/radiator-bleeding');
+        }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.preRinse = false;
+        profile.preRinseAnswered = true;
+        profile.update();
+        context.go('/radiator-bleeding');
+      },
+      answerContent: buildYesNoOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+      ),
+    );
+  }
+}
+
+
 // ── Radiator Bleeding Question ───────────────────────────────────────────────
 class RadiatorBleedingScreen extends StatefulWidget {
   @override
@@ -7466,13 +7672,80 @@ class _RadiatorBleedingScreenState extends State<RadiatorBleedingScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.7497,
+      progress: 0.7056,
       question: 'When did you last bleed your radiators?',
       answered: _selected != null,
-      backRoute: '/shower-time',
+      backRoute: profile.haveDishwasher ? '/prerinse' : '/dishwasher',
       onNext: () {
         profile.radiatorBleeding = _selected!;
         profile.radiatorBleedingAnswered = true;
+        profile.update();
+        if (profile.returningFromEdit) {
+          profile.returningFromEdit = false;
+          context.go('/answers');
+        } else {
+          context.go('/freezer-defrost');
+        }
+      },
+      onSkip: profile.returningFromEdit ? null : () {
+        profile.radiatorBleeding = 'never';
+        profile.radiatorBleedingAnswered = true;
+        profile.update();
+        context.go('/freezer-defrost');
+      },
+      answerContent: buildSingleSelectOptions(
+        selected: _selected,
+        onSelect: (value) => setState(() => _selected = value),
+        options: [
+          {
+            'value': 'never',
+            'label': 'Never!',
+            'icon': Icons.cancel,
+          },
+          {
+            'value': 'over_a_year_ago',
+            'label': 'Over a year ago',
+            'icon': Icons.calendar_today,
+          },
+          {
+            'value': 'this_year',
+            'label': 'This year',
+            'icon': Icons.check_circle,
+          },
+        ],
+      ),
+    );
+  }
+}
+
+// ── Freezer Defrost Question ───────────────────────────────────────────────
+class FreezerDefrostScreen extends StatefulWidget {
+  @override
+  _FreezerDefrostScreenState createState() => _FreezerDefrostScreenState();
+}
+
+class _FreezerDefrostScreenState extends State<FreezerDefrostScreen> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+    _selected = profile.freezerDefrostAnswered ? profile.freezerDefrost : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = Provider.of<ProfileStore>(context, listen: false);
+
+    return QuizFrame(
+      progress: 0.7644,
+      question: 'When did you last defrost your freezer?',
+      answered: _selected != null,
+      backRoute: '/radiator-bleeding',
+      onNext: () {
+        profile.freezerDefrost = _selected!;
+        profile.freezerDefrostAnswered = true;
         profile.update();
         if (profile.returningFromEdit) {
           profile.returningFromEdit = false;
@@ -7482,8 +7755,8 @@ class _RadiatorBleedingScreenState extends State<RadiatorBleedingScreen> {
         }
       },
       onSkip: profile.returningFromEdit ? null : () {
-        profile.radiatorBleeding = 'never';
-        profile.radiatorBleedingAnswered = true;
+        profile.freezerDefrost = 'never';
+        profile.freezerDefrostAnswered = true;
         profile.update();
         context.go('/washing-amount');
       },
@@ -7540,7 +7813,7 @@ class _WashingAmountScreenState extends State<WashingAmountScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.833,
+      progress: 0.8232,
       question: 'How many loads of washing do you do per week?',
       answered: _hasValue,
       backRoute: '/radiator-bleeding',
@@ -7628,7 +7901,7 @@ class _WashingTemperatureScreenState extends State<WashingTemperatureScreen> {
     final profile = Provider.of<ProfileStore>(context, listen: false);
 
     return QuizFrame(
-      progress: 0.9163,
+      progress: 0.93,
       question: 'What temperature do you do your washing at?',
       answered: _selected != null,
       backRoute: '/washing-amount',
@@ -8219,6 +8492,43 @@ class _HabitsScreenState extends State<HabitsScreen> {
     }
   }
 
+  Future<void> _addConsciousClothesPurchase() async {
+    final controller = TextEditingController();
+    final amount = await showDialog<double>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('How much did you spend?'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(hintText: 'e.g. 25', prefixText: '£'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = double.tryParse(controller.text);
+                Navigator.of(context).pop(value);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (amount != null && amount > 0) {
+      final profile = Provider.of<ProfileStore>(context, listen: false);
+      profile.consciousClothesPurchases = [...profile.consciousClothesPurchases, amount];
+      profile.update();
+      await _fetchHabits();
+    }
+  }
+
   Future<void> _doItAgain(String name) async {
     final profile = Provider.of<ProfileStore>(context, listen: false);
     profile.completedActions = [...profile.completedActions, name];
@@ -8229,6 +8539,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
   @override
   Widget build(BuildContext context) {
     final habits = (_data?['habits'] as List?) ?? [];
+    final whatElse = (_data?['what_else'] as List?) ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -8253,67 +8564,126 @@ class _HabitsScreenState extends State<HabitsScreen> {
                       SizedBox(height: 8),
                       Text('Keep it up — every repeat adds up.', style: TextStyle(color: kTextSubtle, fontSize: 13)),
                       SizedBox(height: 24),
-                      if (habits.isEmpty)
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              'Nothing here yet — complete a repeatable action from your tasks to start building a habit.',
-                              style: TextStyle(color: kTextSubtle),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        )
-                      else
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: habits.length,
-                            itemBuilder: (context, index) {
-                              final habit = habits[index] as Map<String, dynamic>;
-                              final name = habit['name'] as String;
-                              final label = habit['label'] as String;
-                              final reduction = (habit['reduction_kg_co2e'] as num).toDouble();
-                              final timesCompleted = habit['times_completed'] as int? ?? 0;
-                              final cardColor = actionCardColors[name.hashCode.abs() % actionCardColors.length];
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (habits.isEmpty)
+                                Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 24),
+                                  child: Center(
+                                    child: Text(
+                                      'Nothing here yet — complete a repeatable action from your tasks to start building a habit.',
+                                      style: TextStyle(color: kTextSubtle),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                )
+                              else
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: NeverScrollableScrollPhysics(),
+                                  itemCount: habits.length,
+                                  itemBuilder: (context, index) {
+                                    final habit = habits[index] as Map<String, dynamic>;
+                                    final name = habit['name'] as String;
+                                    final label = habit['label'] as String;
+                                    final perInstance = (habit['reduction_kg_co2e'] as num).toDouble();
+                                    final timesCompleted = habit['times_completed'] as int? ?? 0;
+                                    final totalReduction = perInstance * timesCompleted;
+                                    final cardColor = actionCardColors[name.hashCode.abs() % actionCardColors.length];
 
-                              return Container(
-                                margin: EdgeInsets.only(bottom: 12),
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                decoration: BoxDecoration(
-                                  color: kSurface,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: cardColor, width: 2),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                    return Container(
+                                      margin: EdgeInsets.only(bottom: 12),
+                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                      decoration: BoxDecoration(
+                                        color: kSurface,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: cardColor, width: 2),
+                                      ),
+                                      child: Row(
                                         children: [
-                                          Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: kText, fontSize: 14)),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            '${reduction.toStringAsFixed(2)} kg CO₂e • done $timesCompleted time${timesCompleted == 1 ? '' : 's'}',
-                                            style: TextStyle(fontSize: 12, color: kTextSubtle),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: kText, fontSize: 14)),
+                                                SizedBox(height: 4),
+                                                Text(
+                                                  '${totalReduction.toStringAsFixed(2)} kg CO₂e • done $timesCompleted time${timesCompleted == 1 ? '' : 's'}',
+                                                  style: TextStyle(fontSize: 12, color: kTextSubtle),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          ElevatedButton(
+                                            onPressed: () => _doItAgain(name),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: cardColor,
+                                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                              shape: StadiumBorder(),
+                                            ),
+                                            child: Text('Done it!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    SizedBox(width: 12),
-                                    ElevatedButton(
-                                      onPressed: () => _doItAgain(name),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: cardColor,
-                                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                        shape: StadiumBorder(),
-                                      ),
-                                      child: Text('Done it!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-                                    ),
-                                  ],
+                                    );
+                                  },
                                 ),
-                              );
-                            },
+                              SizedBox(height: 24),
+                              Text('What Else?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: kText)),
+                              SizedBox(height: 12),
+                              ...whatElse.map((item) {
+                                final entry = item as Map<String, dynamic>;
+                                final name = entry['name'] as String;
+                                final label = entry['label'] as String;
+                                final reduction = (entry['reduction_kg_co2e'] as num).toDouble();
+                                final timesCompleted = entry['times_completed'] as int? ?? 0;
+                                final cardColor = actionCardColors[name.hashCode.abs() % actionCardColors.length];
+
+                                return Container(
+                                  margin: EdgeInsets.only(bottom: 12),
+                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: kSurface,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: cardColor, width: 2),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: kText, fontSize: 14)),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              '${reduction.toStringAsFixed(2)} kg CO₂e saved • $timesCompleted purchase${timesCompleted == 1 ? '' : 's'}',
+                                              style: TextStyle(fontSize: 12, color: kTextSubtle),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      ElevatedButton(
+                                        onPressed: _addConsciousClothesPurchase,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: cardColor,
+                                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          shape: StadiumBorder(),
+                                        ),
+                                        child: Text('Done it!', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ],
                           ),
                         ),
+                      ),
                     ],
                   ),
           ),

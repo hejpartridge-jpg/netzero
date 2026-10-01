@@ -12,6 +12,7 @@ from reductions.energyr import (
     heat_pumps_apply,
     reduce_wm_temperature_apply,
     bleed_radiators_apply,
+    freezer_defrost_apply,
     water_cylinder_apply,
     radiator_panels_apply,
     window_dp_apply,
@@ -22,6 +23,8 @@ from reductions.energyr import (
     cavity_insulation_apply,
     solid_wall_insulation_apply,
     floor_insulation_apply,
+    prerinse_apply,
+    full_dishwasher_apply,
 )
 
 from reductions.travelr import (
@@ -158,6 +161,17 @@ def bleed_radiators_co2(global_state: dict, adjusted_state: dict, co2_state: dic
     new_co2["total_co2"] = beginning_co2 - reduction
     return new_global, new_adjusted, reduction, new_co2
 
+# Freezer Defrost
+def freezer_defrost_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
+    beginning_co2 = co2_state["total_co2"]
+    new_co2 = co2_state.copy()
+    new_global, new_adjusted = freezer_defrost_apply(global_state, adjusted_state, profile)
+    co2_before = calculate_total_emissions(adjusted_state)["total_kg_co2e"]
+    co2_after = calculate_total_emissions(new_adjusted)["total_kg_co2e"]      
+    reduction = co2_before - co2_after
+    new_co2["total_co2"] = beginning_co2 - reduction
+    return new_global, new_adjusted, reduction, new_co2
+
 # Water Cylinder Jacket
 def water_cylinder_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
     beginning_co2 = co2_state["total_co2"]
@@ -196,6 +210,28 @@ def shorter_shower_co2(global_state: dict, adjusted_state: dict, co2_state: dict
     beginning_co2 = co2_state["total_co2"]
     new_co2 = co2_state.copy()
     new_global, new_adjusted = shorter_shower_apply(global_state, adjusted_state, profile)
+    co2_before = calculate_total_emissions(adjusted_state)["total_kg_co2e"]
+    co2_after = calculate_total_emissions(new_adjusted)["total_kg_co2e"]      
+    reduction = co2_before - co2_after
+    new_co2["total_co2"] = beginning_co2 - reduction
+    return new_global, new_adjusted, reduction, new_co2
+
+# Prerinse
+def prerinse_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
+    beginning_co2 = co2_state["total_co2"]
+    new_co2 = co2_state.copy()
+    new_global, new_adjusted = prerinse_apply(global_state, adjusted_state, profile)
+    co2_before = calculate_total_emissions(adjusted_state)["total_kg_co2e"]
+    co2_after = calculate_total_emissions(new_adjusted)["total_kg_co2e"]      
+    reduction = co2_before - co2_after
+    new_co2["total_co2"] = beginning_co2 - reduction
+    return new_global, new_adjusted, reduction, new_co2
+
+# Use Dishwasher Only When Full
+def full_dishwasher_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:
+    beginning_co2 = co2_state["total_co2"]
+    new_co2 = co2_state.copy()
+    new_global, new_adjusted = full_dishwasher_apply(global_state, adjusted_state, profile)
     co2_before = calculate_total_emissions(adjusted_state)["total_kg_co2e"]
     co2_after = calculate_total_emissions(new_adjusted)["total_kg_co2e"]      
     reduction = co2_before - co2_after
@@ -364,3 +400,18 @@ def vegan_pets_co2(global_state: dict, adjusted_state: dict, co2_state: dict, pr
     reduction = co2_before - co2_after
     new_co2["total_co2"] = beginning_co2 - reduction
     return new_global, new_adjusted, reduction, new_co2
+
+# Unsubscribe from a mailing list
+def unsubscribe_mail_co2(global_state: dict, adjusted_state: dict, co2_state: dict, profile: dict) -> tuple:   
+    reduction = 0.0468
+    new_co2 = co2_state.copy()
+    new_co2["total_co2"] = co2_state["total_co2"] - reduction
+    return global_state, adjusted_state, reduction, new_co2
+
+
+CLOTHES_FACTOR_NEW = 0.668
+CLOTHES_FACTOR_CONSCIOUS = 0.52271
+
+def calculate_conscious_clothes_savings(purchases: list) -> float:
+    factor_diff = CLOTHES_FACTOR_NEW - CLOTHES_FACTOR_CONSCIOUS
+    return sum((amount or 0) * factor_diff for amount in purchases)
