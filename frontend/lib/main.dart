@@ -8494,29 +8494,72 @@ class _HabitsScreenState extends State<HabitsScreen> {
 
   Future<void> _addConsciousClothesPurchase() async {
     final controller = TextEditingController();
+    final cardColor = actionCardColors['conscious_clothes'.hashCode.abs() % actionCardColors.length];
+    bool hasText = false;
+
     final amount = await showDialog<double>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('How much did you spend?'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(hintText: 'e.g. 25', prefixText: '£'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final value = double.tryParse(controller.text);
-                Navigator.of(context).pop(value);
-              },
-              child: Text('Save'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: cardColor, width: 2),
+              ),
+              title: Text('How much did you spend?', style: TextStyle(color: kText)),
+              content: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: kSurface,
+                  border: Border.all(color: kBorder),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    if (!hasText)
+                      Text('e.g. ', style: TextStyle(fontSize: 20, color: kText)),
+                    Text('£', style: TextStyle(fontSize: 20, fontWeight: hasText ? FontWeight.bold : FontWeight.normal, color: kText)),
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          hintText: '25',
+                          hintStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: kText),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: (value) {
+                          setDialogState(() => hasText = value.trim().isNotEmpty);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel', style: TextStyle(color: kTextSubtle)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final value = double.tryParse(controller.text);
+                    Navigator.of(context).pop(value);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: cardColor),
+                  child: Text('Save', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
